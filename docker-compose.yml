@@ -1,0 +1,14 @@
+version: "3.9"
+services:
+  ibkr-gateway:
+    image: voyz/ibeam:latest
+    container_name: ibkr-gateway
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      - IBEAM_ACCOUNT=${TWS_USERID}
+      - IBEAM_PASSWORD=${TWS_PASSWORD}
+      - IBEAM_TRADING_MODE=paper
+      - IBEAM_GATEWAY_PORT=5000
+      - IBEAM_AUTHENTICATION_STRATEGY=BROWSERLESS
