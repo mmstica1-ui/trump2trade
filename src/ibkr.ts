@@ -11,6 +11,10 @@ const outsideRTH = /^true$/i.test(process.env.IBKR_OUTSIDE_RTH || 'false');
 export type InlineTradePayload = { a: 'buy_call'|'buy_put'|'sell_call'|'sell_put'|'preview'; t?: string };
 
 export async function chooseTrade(p: InlineTradePayload): Promise<string> {
+  // Safety: allow preview-only mode via env
+  if ((process.env.DISABLE_TRADES || '').toLowerCase() === 'true') {
+    return '🧪 Preview mode is ON (DISABLE_TRADES=true). No orders will be sent.';
+  }
   if (p.a === 'preview') return 'No trade. This is a dry run.';
   if (!p.t) throw new Error('Missing ticker');
 
@@ -49,11 +53,12 @@ async function snapshotPrice(conid: number): Promise<number> {
 }
 
 async function nearestExpiry(underlyingConid: number): Promise<string> {
+  // Get available expirations and normalize to YYYY-MM-DD
   const r = await axios.get(`${base}/iserver/secdef/strikes`, { params: { conid: underlyingConid }, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
   const raw = (r.data?.expirations || r.data?.expirationsMonthYear || []) as string[];
   if (!raw.length) throw new Error('No expirations');
-  const norm = raw.map((e: string) => e.includes('-') ? e : `${e[:4]}-${e[4:6]}-${e[6:8]}`);
-  norm.sort();
+  const norm = raw.map((e: string) => e.includes('-') ? e : `${e.slice(0,4)}-${e.slice(4,6)}-${e.slice(6,8)}`);
+  norm.sort(); // lexicographic works for YYYY-MM-DD
   const today = new Date().toISOString().slice(0,10);
   return norm.find(e => e >= today) || norm[0];
 }
