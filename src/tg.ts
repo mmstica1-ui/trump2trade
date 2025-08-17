@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard } from 'grammy';
 import axios from 'axios';
-import { chooseTrade, InlineTradePayload } from './ibkr';
-import { getHealthSnapshot, toggleSafeMode, pauseApifySchedule, resumeApifySchedule, triggerDeploy } from './ops';
+import { chooseTrade, InlineTradePayload } from './ibkr.js';
+import { getHealthSnapshot, toggleSafeMode, pauseApifySchedule, resumeApifySchedule, triggerDeploy } from './ops.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);

@@ -1,6 +1,6 @@
 import axios from 'axios';
-import https from 'https';
-import { toNearest } from './utils';
+import * as https from 'https';
+import { toNearest } from './utils.js';
 
 const base = process.env.IBKR_BASE_URL!;
 const acct = process.env.IBKR_ACCOUNT_ID!;

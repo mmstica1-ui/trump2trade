@@ -1,10 +1,10 @@
 import 'dotenv/config';
 import express from 'express';
 import pino from 'pino';
-import bot, { sendText } from './tg';
-import { handleApifyWebhook } from './apify';
-import { scheduleDailyStats } from './stats';
-import { startOpsSelfChecks } from './ops';
+import bot, { sendText } from './tg.js';
+import { handleApifyWebhook } from './apify.js';
+import { scheduleDailyStats } from './stats.js';
+import { startOpsSelfChecks } from './ops.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -19,7 +19,7 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   const { text = 'Tariffs removed on chips from China', url = 'https://truth.social/mock' } = req.body || {};
   await handleApifyWebhook(
     { body: { text, url }, headers: { 'x-apify-signature': process.env.APIFY_WEBHOOK_SECRET || '' } } as any,
-    { status: (c:number) => ({ json: (obj:any) => undefined }), json: (obj:any) => undefined } as any
+    { status: (c:number) => ({ json: (_obj:any) => undefined }), json: (_obj:any) => undefined } as any
   );
   res.json({ ok: true });
 });

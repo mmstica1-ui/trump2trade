@@ -1,7 +1,7 @@
-import https from 'https';
 import axios from 'axios';
-import { sendText } from './tg';
-import { getLastApifyHitMs } from './stats';
+import * as https from 'https';
+import { sendText } from './tg.js';
+import { getLastApifyHitMs } from './stats.js';
 
 export function startOpsSelfChecks() {
   const every = Number(process.env.OPS_CHECK_EVERY_MS || '60000');

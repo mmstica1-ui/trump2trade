@@ -1,8 +1,8 @@
 import type { Request, Response } from 'express';
 import { z } from 'zod';
-import { analyzePost } from './llm';
-import { sendTrumpAlert } from './tg';
-import { markApifyHit } from './stats';
+import { analyzePost } from './llm.js';
+import { sendTrumpAlert } from './tg.js';
+import { markApifyHit } from './stats.js';
 
 const ApifyBody = z.object({ text: z.string().min(3), url: z.string().url() });
 

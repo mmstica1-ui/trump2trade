@@ -1,4 +1,4 @@
-import { sendText } from './tg';
+import { sendText } from './tg.js';
 
 let errors = 0;
 let lastApifyHit = Date.now();
