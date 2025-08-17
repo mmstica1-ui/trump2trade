@@ -6,7 +6,8 @@ const genAI = new GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: modelName });
 
 const SAFE_TICKERS = new Set([
-  'NVDA','AMD','TSM','AAPL','AMZN','MSFT','META','TSLA','AVGO','QCOM','INTC','MU','SMH','SOXX','SPY','QQQ','DIA','IWM','XLE','XLF','XLK','GDX','GLD','USO','TLT','HYG'
+  'NVDA','AMD','TSM','AAPL','AMZN','MSFT','META','TSLA','AVGO','QCOM','INTC','MU',
+  'SMH','SOXX','SPY','QQQ','DIA','IWM','XLE','XLF','XLK','GDX','GLD','USO','TLT','HYG'
 ]);
 
 export async function analyzePost(text: string): Promise<{ summary: string; tickers: string[] }> {
@@ -20,7 +21,6 @@ export async function analyzePost(text: string): Promise<{ summary: string; tick
   const res = await model.generateContent(prompt);
   let content = res.response.text() || '';
 
-  // Extract first JSON block if the model wrapped it in backticks
   const m = content.match(/\{[\s\S]*\}/);
   const jsonStr = m ? m[0] : content.trim();
 

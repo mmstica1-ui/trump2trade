@@ -1,4 +1,13 @@
-# Trump2Trade (Gemini) — התקנה קצרה
-- קובץ זה מיועד להרצה ב-Railway עם LLM של Google Gemini.
-- עדכן את `GOOGLE_API_KEY` ו-`GEMINI_MODEL` ב-Railway → Variables.
-- הפקודות בטלגרם: /help /ping /status /deploy /safe_mode on|off /apify pause|resume
+# Trump2Trade — Gemini + Poller (Persist + Backoff)
+
+## התקנה קצרה
+1) העלה את הריפו ל-GitHub (או דרוס קיים).  
+2) Railway → New Project (או חבר קיים) → הגדר Variables לפי `.env.example`.  
+3) Deploy.  
+4) בדיקה: גלוש ל-`/healthz` ונסה בטלגרם `/ping`, `/status`.
+
+## בדיקת זרימה (ללא פוסט אמיתי)
+```
+POST /dev/mock
+{ "text": "Trump cancels tariffs on chips", "url": "https://truth.social/mock" }
+```

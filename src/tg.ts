@@ -1,7 +1,7 @@
 import { Bot, InlineKeyboard } from 'grammy';
 import axios from 'axios';
 import { chooseTrade, InlineTradePayload } from './ibkr.js';
-import { getHealthSnapshot, toggleSafeMode, pauseApifySchedule, resumeApifySchedule, triggerDeploy } from './ops.js';
+import { getHealthSnapshot, toggleSafeMode } from './ops.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
@@ -32,7 +32,7 @@ export async function sendTrumpAlert(args: { summary: string; tickers: string[];
   return bot.api.sendMessage(chatId, `🦅 <b>Trump post → trade idea</b>\n\n<b>Summary:</b> ${args.summary}\n<b>Tickers:</b> ${args.tickers.join(', ')}\n\n<code>${args.url}</code>`, { parse_mode: 'HTML', reply_markup: kb });
 }
 
-bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /stats, /health, /status, /deploy, /safe_mode on|off, /apify pause|resume'));
+bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /safe_mode on|off'));
 bot.command('ping', ctx => ctx.reply('pong'));
 
 bot.on('callback_query:data', async ctx => {
@@ -46,7 +46,6 @@ bot.on('callback_query:data', async ctx => {
   }
 });
 
-// Ops: status summary
 bot.command('status', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
@@ -55,7 +54,6 @@ bot.command('status', async (ctx) => {
       `📈 Status\n`+
       `App: ${s.appOk ? 'OK' : 'DOWN'}\n`+
       `IBKR: ${s.ibkrOk ? 'OK' : 'DOWN'}\n`+
-      `Apify last hit: ${Math.round(s.msSinceApify/1000)}s ago\n`+
       `SafeMode: ${(process.env.DISABLE_TRADES||'false')}`
     );
   } catch (e:any) {
@@ -63,41 +61,15 @@ bot.command('status', async (ctx) => {
   }
 });
 
-// Ops: deploy via GitHub Actions
-bot.command('deploy', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    await triggerDeploy();
-    await ctx.reply('🚀 Deploy started (GitHub Actions).');
-  } catch (e:any) {
-    await ctx.reply(`❌ Deploy error: ${e?.message||e}`);
-  }
-});
-
-// Ops: safe_mode on|off
 bot.command('safe_mode', async (ctx) => {
   if (!adminOnly(ctx)) return;
   const arg = (ctx.message?.text || '').split(' ')[1]?.toLowerCase();
   if (!['on','off'].includes(arg)) return ctx.reply('Usage: /safe_mode on|off');
   try {
     await toggleSafeMode(arg === 'on');
-    await ctx.reply(`🛡️ Safe Mode is now ${arg.toUpperCase()}. (Variable updated on Railway)`);
+    await ctx.reply(`🛡️ Safe Mode is now ${arg.toUpperCase()}.`);
   } catch (e:any) {
     await ctx.reply(`❌ SafeMode error: ${e?.message||e}`);
-  }
-});
-
-// Ops: apify pause|resume
-bot.command('apify', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  const action = (ctx.message?.text || '').split(' ')[1]?.toLowerCase();
-  if (!['pause','resume'].includes(action)) return ctx.reply('Usage: /apify pause|resume');
-  try {
-    if (action === 'pause') await pauseApifySchedule();
-    else await resumeApifySchedule();
-    await ctx.reply(`🛰️ Apify schedule ${action}d.`);
-  } catch (e:any) {
-    await ctx.reply(`❌ Apify error: ${e?.message||e}`);
   }
 });
 
