@@ -11,11 +11,11 @@ const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debu
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/healthz', (_, res) => res.json({ ok: true }));
-app.post('/webhook/apify', (req, res) => handleApifyWebhook(req, res));
+app.get('/healthz', (_: express.Request, res: express.Response) => res.json({ ok: true }));
+app.post('/webhook/apify', (req: express.Request, res: express.Response) => handleApifyWebhook(req, res));
 
 // dev helper: inject a fake post
-app.post('/dev/mock', async (req, res) => {
+app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   const { text = 'Tariffs removed on chips from China', url = 'https://truth.social/mock' } = req.body || {};
   await handleApifyWebhook(
     { body: { text, url }, headers: { 'x-apify-signature': process.env.APIFY_WEBHOOK_SECRET || '' } } as any,

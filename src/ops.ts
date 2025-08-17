@@ -1,3 +1,4 @@
+import https from 'https';
 import axios from 'axios';
 import { sendText } from './tg';
 import { getLastApifyHitMs } from './stats';
@@ -30,7 +31,7 @@ export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolea
   try {
     const base = process.env.IBKR_BASE_URL;
     if (base) {
-      const r = await axios.get(`${base}/iserver/auth/status`, { timeout: 5000, httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false }) });
+      const r = await axios.get(`${base}/iserver/auth/status`, { timeout: 5000, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
       ibkrOk = !!(r.data?.authenticated);
     }
   } catch {}
