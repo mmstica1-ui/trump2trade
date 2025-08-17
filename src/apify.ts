@@ -2,6 +2,7 @@ import type { Request, Response } from 'express';
 import { z } from 'zod';
 import { analyzePost } from './llm';
 import { sendTrumpAlert } from './tg';
+import { markApifyHit } from './stats';
 
 const ApifyBody = z.object({ text: z.string().min(3), url: z.string().url() });
 
@@ -14,6 +15,7 @@ export async function handleApifyWebhook(req: Request, res: Response) {
 
   const { text, url } = parsed.data;
   const analysis = await analyzePost(text);
+  markApifyHit();
   await sendTrumpAlert({ summary: analysis.summary, tickers: analysis.tickers, url });
   return res.json({ ok: true });
 }

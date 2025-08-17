@@ -11,7 +11,6 @@ const outsideRTH = /^true$/i.test(process.env.IBKR_OUTSIDE_RTH || 'false');
 export type InlineTradePayload = { a: 'buy_call'|'buy_put'|'sell_call'|'sell_put'|'preview'; t?: string };
 
 export async function chooseTrade(p: InlineTradePayload): Promise<string> {
-  // Safety: allow preview-only mode via env
   if ((process.env.DISABLE_TRADES || '').toLowerCase() === 'true') {
     return '🧪 Preview mode is ON (DISABLE_TRADES=true). No orders will be sent.';
   }
@@ -33,9 +32,9 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   const isCall = p.a.endsWith('call');
   const strike = isCall ? callStrike : putStrike;
 
-  const optionConid = await optionConid(underlying.conid, expiry, strike, isCall ? 'C' : 'P');
+  const optConid = await optionConid(underlying.conid, expiry, strike, isCall ? 'C' : 'P');
 
-  const order = await placeMarketOptionOrder(optionConid, isBuy ? 'BUY' : 'SELL');
+  const order = await placeMarketOptionOrder(optConid, isBuy ? 'BUY' : 'SELL');
   return `✅ ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} ${p.t} ${expiry} ${strike} x${qty}\nOrderId: ${order?.id ?? 'n/a'}`;
 }
 
@@ -53,19 +52,18 @@ async function snapshotPrice(conid: number): Promise<number> {
 }
 
 async function nearestExpiry(underlyingConid: number): Promise<string> {
-  // Get available expirations and normalize to YYYY-MM-DD
   const r = await axios.get(`${base}/iserver/secdef/strikes`, { params: { conid: underlyingConid }, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
   const raw = (r.data?.expirations || r.data?.expirationsMonthYear || []) as string[];
   if (!raw.length) throw new Error('No expirations');
   const norm = raw.map((e: string) => e.includes('-') ? e : `${e.slice(0,4)}-${e.slice(4,6)}-${e.slice(6,8)}`);
-  norm.sort(); // lexicographic works for YYYY-MM-DD
+  norm.sort();
   const today = new Date().toISOString().slice(0,10);
   return norm.find(e => e >= today) || norm[0];
 }
 
 async function strikesFor(underlyingConid: number, expiry: string): Promise<number[]> {
   const r = await axios.get(`${base}/iserver/secdef/strikes`, { params: { conid: underlyingConid, expiry }, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
-  const out: number[] = (r.data?.strikes || []).map((n:any)=>Number(n)).sort((a,b)=>a-b);
+  const out: number[] = (r.data?.strikes || []).map((n:any)=>Number(n)).sort((a: number, b: number)=>a-b);
   if (!out.length) throw new Error('No strikes for expiry');
   return out;
 }
