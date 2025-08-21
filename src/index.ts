@@ -15,16 +15,11 @@ app.use(express.json({ limit: '1mb' }));
 
 app.get('/healthz', (_: express.Request, res: express.Response) => res.json({ ok: true }));
 
-// Apify webhook endpoint
+// Webhooks
 app.post('/webhook/apify', handleApifyWebhook);
-
-// Genspark webhook endpoint (with query param secret)
 app.post('/webhook/genspark', handleGensparkWebhook);
-
-// Optional: return 405 for GET requests to webhook endpoints
-app.get('/webhook/genspark', (_req, res) =>
-  res.status(405).json({ ok: false, use: 'POST' })
-);
+app.get('/webhook/genspark', (_: express.Request, res: express.Response) => 
+  res.status(405).json({ ok: false, use: 'POST' }));
 
 // dev helper: inject a fake post
 app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
