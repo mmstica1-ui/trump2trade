@@ -5,6 +5,7 @@ import bot, { sendText } from './tg.js';
 import { scheduleDailyStats } from './stats.js';
 import { startOpsSelfChecks } from './ops.js';
 import { startTruthPoller } from './poller.js';
+import { handleApifyWebhook } from './apify.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -12,6 +13,9 @@ const app = express();
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/healthz', (_: express.Request, res: express.Response) => res.json({ ok: true }));
+
+// Apify webhook endpoint
+app.post('/webhook/apify', handleApifyWebhook);
 
 // dev helper: inject a fake post
 app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
