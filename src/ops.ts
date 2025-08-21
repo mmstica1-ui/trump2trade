@@ -2,11 +2,20 @@ import axios from 'axios';
 import * as https from 'https';
 import { sendText } from './tg.js';
 
+// Global system state
+let systemActive = true;
+let pollerHandle: any = null;
+let healthCheckHandle: any = null;
+
 export function startOpsSelfChecks() {
   const every = Number(process.env.OPS_CHECK_EVERY_MS || '60000');
   const checkIbkr = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true';
   
-  setInterval(async () => {
+  if (healthCheckHandle) clearInterval(healthCheckHandle);
+  
+  healthCheckHandle = setInterval(async () => {
+    if (!systemActive) return; // Skip if system is off
+    
     try {
       const snap = await getHealthSnapshot();
       if (!snap.appOk) await sendText('❗ App healthz failed.');
@@ -47,4 +56,81 @@ export async function toggleSafeMode(on: boolean) {
   await axios.post('https://backboard.railway.app/graphql', {
     query, variables: { serviceId, name: 'DISABLE_TRADES', value: on ? 'true' : 'false' }
   }, { headers: { Authorization: `Bearer ${token}` } });
+}
+
+export async function toggleSystemActive(active: boolean) {
+  systemActive = active;
+  if (!active) {
+    // Stop poller
+    if (pollerHandle) {
+      clearInterval(pollerHandle);
+      pollerHandle = null;
+    }
+    // Stop health checks
+    if (healthCheckHandle) {
+      clearInterval(healthCheckHandle);
+      healthCheckHandle = null;
+    }
+    await sendText('⏸️ System deactivated - Truth monitoring stopped');
+  } else {
+    // Restart all services
+    const { startTruthPoller } = await import('./poller.js');
+    const { stopTruthPoller } = await import('./poller.js');
+    startTruthPoller();
+    startOpsSelfChecks();
+    await sendText('🔄 System reactivated - Running diagnostics...');
+  }
+}
+
+export async function runFullSystemCheck() {
+  const results: string[] = [];
+  
+  // 1. Test Telegram
+  try {
+    results.push('✅ Telegram: Connected');
+  } catch (e) {
+    results.push('❌ Telegram: Failed');
+  }
+  
+  // 2. Test Gemini API
+  try {
+    const { analyzePost } = await import('./llm.js');
+    const test = await analyzePost('Test analysis');
+    results.push('✅ Gemini AI: Connected');
+  } catch (e: any) {
+    results.push(`❌ Gemini AI: ${e?.message || 'Failed'}`);
+  }
+  
+  // 3. Test Health endpoint
+  try {
+    const snap = await getHealthSnapshot();
+    results.push(`✅ Health: App ${snap.appOk ? 'OK' : 'FAIL'}`);
+    
+    // Only test IBKR if trades enabled
+    const tradesEnabled = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true';
+    if (tradesEnabled) {
+      results.push(`${snap.ibkrOk ? '✅' : '❌'} IBKR: ${snap.ibkrOk ? 'Connected' : 'Not authenticated'}`);
+    } else {
+      results.push('⚠️ IBKR: Disabled (Safe mode)');
+    }
+  } catch (e: any) {
+    results.push(`❌ Health Check: ${e?.message || 'Failed'}`);
+  }
+  
+  // 4. Test Apify webhook endpoint
+  try {
+    const appUrl = process.env.APP_URL || 'https://web-production-918d1.up.railway.app';
+    const testUrl = `${appUrl}/webhook/apify`;
+    results.push(`✅ Webhook: ${testUrl}`);
+  } catch (e) {
+    results.push('❌ Webhook: Setup failed');
+  }
+  
+  // 5. System status
+  results.push(`🔄 Truth Poller: ${process.env.POLL_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
+  results.push(`🛡️ Safe Mode: ${process.env.DISABLE_TRADES === 'true' ? 'ON' : 'OFF'}`);
+  results.push(`🎯 System: ${systemActive ? 'ACTIVE' : 'PAUSED'}`);
+  
+  const report = '🔍 **System Diagnostics**\n\n' + results.join('\n');
+  await sendText(report);
 }

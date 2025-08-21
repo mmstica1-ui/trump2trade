@@ -24,9 +24,17 @@ function saveState(s: State) {
 }
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
+let pollerRunning = false;
+let pollerAbortController: AbortController | null = null;
+
 export function startTruthPoller() {
   const enabled = (process.env.POLL_ENABLED || 'false').toLowerCase() === 'true';
   if (!enabled) { log.info('Truth poller disabled (set POLL_ENABLED=true to enable)'); return; }
+  
+  if (pollerRunning) {
+    log.info('Truth poller already running');
+    return;
+  }
 
   const url = process.env.TRUTH_PROFILE_URL || 'https://truthsocial.com/@realDonaldTrump';
   const baseEvery = Number(process.env.POLL_INTERVAL_MS || '60000');
@@ -41,9 +49,12 @@ export function startTruthPoller() {
   let lastPostId: string | null = state.lastPostId ?? null;
   let lastETag: string | null = state.lastETag ?? null;
 
+  pollerRunning = true;
+  pollerAbortController = new AbortController();
+  
   (async () => {
     log.info({ url, baseEvery, STATE_PATH }, 'Truth poller started');
-    while (true) {
+    while (pollerRunning && !pollerAbortController?.signal.aborted) {
       try {
         const headers: Record<string,string> = {
           'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36',
@@ -109,5 +120,15 @@ export function startTruthPoller() {
       }
       await sleep(currentEvery);
     }
+    pollerRunning = false;
+    log.info('Truth poller stopped');
   })();
+}
+
+export function stopTruthPoller() {
+  if (pollerAbortController) {
+    pollerAbortController.abort();
+    pollerAbortController = null;
+  }
+  pollerRunning = false;
 }
