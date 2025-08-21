@@ -22,10 +22,9 @@ export function sendText(text: string) {
 export async function sendTrumpAlert(args: { summary: string; tickers: string[]; url: string }) {
   const kb = new InlineKeyboard();
   for (const t of args.tickers.slice(0, 4)) {
-    kb.text(`🟢 Buy Call ${t}`, JSON.stringify({ a: 'buy_call', t })).row();
+    // Only Buy Call and Buy Put buttons
+    kb.text(`🟢 Buy Call ${t}`, JSON.stringify({ a: 'buy_call', t }));
     kb.text(`🔴 Buy Put ${t}`, JSON.stringify({ a: 'buy_put', t })).row();
-    kb.text(`⚪ Sell Call ${t}`, JSON.stringify({ a: 'sell_call', t }));
-    kb.text(`⚫ Sell Put ${t}`, JSON.stringify({ a: 'sell_put', t })).row();
   }
   kb.text('🧪 Preview (no trade)', JSON.stringify({ a: 'preview' })).row();
 
