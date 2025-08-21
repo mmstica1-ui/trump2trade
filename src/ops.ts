@@ -4,11 +4,14 @@ import { sendText } from './tg.js';
 
 export function startOpsSelfChecks() {
   const every = Number(process.env.OPS_CHECK_EVERY_MS || '60000');
+  const checkIbkr = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true';
+  
   setInterval(async () => {
     try {
       const snap = await getHealthSnapshot();
       if (!snap.appOk) await sendText('❗ App healthz failed.');
-      if (!snap.ibkrOk) await sendText('❗ IBKR gateway not authenticated.');
+      // Only check IBKR if trades are enabled
+      if (checkIbkr && !snap.ibkrOk) await sendText('❗ IBKR gateway not authenticated.');
     } catch (e:any) {
       await sendText(`❌ Self-check error: ${e?.message||e}`);
     }
