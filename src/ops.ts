@@ -117,11 +117,13 @@ export async function runFullSystemCheck() {
     results.push(`❌ Health Check: ${e?.message || 'Failed'}`);
   }
   
-  // 4. Test Apify webhook endpoint
+  // 4. Test webhook endpoints
   try {
     const appUrl = process.env.APP_URL || 'https://web-production-918d1.up.railway.app';
-    const testUrl = `${appUrl}/webhook/apify`;
-    results.push(`✅ Webhook: ${testUrl}`);
+    const apifyUrl = `${appUrl}/webhook/apify`;
+    const gensparkUrl = `${appUrl}/webhook/genspark?secret=${process.env.GENSPARK_WEBHOOK_SECRET || 'moshe454'}`;
+    results.push(`✅ Apify Webhook: ${apifyUrl}`);
+    results.push(`🎯 Genspark Webhook: ${gensparkUrl}`);
   } catch (e) {
     results.push('❌ Webhook: Setup failed');
   }
