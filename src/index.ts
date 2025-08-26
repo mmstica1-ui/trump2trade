@@ -70,7 +70,7 @@ app.listen(PORT, async () => {
   
   if (now - lastStartupTime > STARTUP_MSG_THROTTLE_MS) {
     saveStartupTime(now);
-    await sendText('🚀 Trump2Trade is live. Use /help');
+    await sendText('🧪 Trump2Trade TESTING MODE is live with Synoptic WebSocket. Use /help');
     log.info('Startup message sent to Telegram');
   } else {
     log.info({ 

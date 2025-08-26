@@ -128,11 +128,16 @@ export async function runFullSystemCheck() {
     results.push('❌ Webhook: Setup failed');
   }
   
-  // 5. System status
+  // 5. Data sources status
+  const synopticEnabled = process.env.SYNOPTIC_API_KEY ? true : false;
+  results.push(`🌐 Synoptic WebSocket: ${synopticEnabled ? 'Connected' : 'Disabled'}`);
   results.push(`🔄 Truth Poller: ${process.env.POLL_ENABLED === 'true' ? 'Enabled' : 'Disabled'}`);
+  
+  // 6. System status
   results.push(`🛡️ Safe Mode: ${process.env.DISABLE_TRADES === 'true' ? 'ON' : 'OFF'}`);
+  results.push(`🧪 Mode: TESTING`);
   results.push(`🎯 System: ${systemActive ? 'ACTIVE' : 'PAUSED'}`);
   
-  const report = '🔍 **System Diagnostics**\n\n' + results.join('\n');
+  const report = '🔍 **Trump2Trade Testing System**\n\n' + results.join('\n') + '\n\n💡 Use /help for commands';
   await sendText(report);
 }
