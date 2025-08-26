@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import pino from 'pino';
+import { initializeMonitoring, getHealthEndpointData } from './monitoring.js';
 
 // Environment validation
 const requiredEnvVars = {
@@ -30,7 +31,28 @@ const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debu
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/healthz', (_: express.Request, res: express.Response) => res.json({ ok: true }));
+// Enhanced health check endpoint
+app.get('/health', (_: express.Request, res: express.Response) => {
+  const health = getHealthEndpointData();
+  const statusCode = health.status === 'healthy' ? 200 : health.status === 'warning' ? 206 : 500;
+  res.status(statusCode).json({
+    ok: health.status === 'healthy',
+    status: health.status,
+    timestamp: new Date().toISOString(),
+    uptime: Math.floor(health.uptime / 1000),
+    memory: health.memory,
+    connections: health.connections,
+    lastPostProcessed: health.lastPostProcessed,
+    alertsSent24h: health.alertsSent24h,
+    recentErrors: health.errors.length
+  });
+});
+
+// Legacy endpoint for Railway
+app.get('/healthz', (_: express.Request, res: express.Response) => {
+  const health = getHealthEndpointData();
+  res.status(health.status === 'critical' ? 500 : 200).json({ ok: health.status !== 'critical' });
+});
 
 // Webhooks
 app.post('/webhook/apify', handleApifyWebhook);
@@ -80,7 +102,13 @@ function saveStartupTime(timestamp: number): void {
 const PORT = Number(process.env.PORT) || 8080;
 app.listen(PORT, async () => {
   log.info({ PORT }, 'server started');
+  
+  // Initialize monitoring system FIRST
+  const monitor = initializeMonitoring(process.env.TELEGRAM_ADMIN_CHAT_ID || process.env.TELEGRAM_CHAT_ID);
+  
   bot.start();
+  monitor.setConnectionStatus('telegram', true);
+  
   scheduleDailyStats();
   startOpsSelfChecks();
   startTruthPoller();
@@ -107,6 +135,16 @@ app.listen(PORT, async () => {
       
       await sendText(message);
       log.info('Startup message sent to Telegram');
+      
+      // Send admin startup notification
+      if (isProduction) {
+        try {
+          const monitor = initializeMonitoring();
+          await monitor.sendWarningAlert(`🚀 Trump2Trade Production Started\n\nFeatures: ${features.join(', ')}\nUptime monitoring active`);
+        } catch (err) {
+          log.warn('Failed to send admin startup notification');
+        }
+      }
     } catch (error) {
       log.warn({ error: (error as any)?.message || error }, 'Failed to send startup message - continuing anyway');
     }
