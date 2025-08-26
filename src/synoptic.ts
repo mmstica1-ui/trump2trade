@@ -115,6 +115,17 @@ function connectToSynoptic() {
     log.info('Connected to Synoptic WebSocket');
     reconnectAttempts = 0;
     
+    // Update monitoring status
+    try {
+      import('./monitoring.js').then(({ getMonitor }) => {
+        const monitor = getMonitor();
+        monitor.setConnectionStatus('synoptic', true);
+        log.info('Updated Synoptic connection status to connected');
+      }).catch(() => {
+        log.debug('Could not update monitoring status (monitor not initialized)');
+      });
+    } catch {}
+    
     // Send subscription message if needed
     const subscriptionMessage = {
       action: 'subscribe',
@@ -260,6 +271,17 @@ function connectToSynoptic() {
   ws.on('close', (code, reason) => {
     log.warn({ code, reason: reason.toString() }, 'Synoptic WebSocket connection closed');
     ws = null;
+    
+    // Update monitoring status
+    try {
+      import('./monitoring.js').then(({ getMonitor }) => {
+        const monitor = getMonitor();
+        monitor.setConnectionStatus('synoptic', false);
+        log.info('Updated Synoptic connection status to disconnected');
+      }).catch(() => {
+        log.debug('Could not update monitoring status (monitor not initialized)');
+      });
+    } catch {}
     
     // Implement exponential backoff for reconnection
     if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {

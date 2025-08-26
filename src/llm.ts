@@ -51,6 +51,15 @@ export async function analyzePost(text: string): Promise<{ summary: string; tick
   // Check if we have a valid API key
   if (!apiKey || apiKey === 'your-google-api-key-here') {
     console.log('⚠️ Using mock analysis - no valid Google API key');
+    // Update monitoring status for no API key
+    try {
+      const { getMonitor } = await import('./monitoring.js');
+      const monitor = getMonitor();
+      monitor.setConnectionStatus('gemini', false);
+      console.log('📊 Updated Gemini status to disconnected (no API key)');
+    } catch (monitorError: any) {
+      console.log('⚠️ Could not update Gemini no-key status:', monitorError?.message || monitorError);
+    }
     return getMockAnalysis(text);
   }
   
@@ -75,36 +84,64 @@ Rules:
 - General: SPY,QQQ
 - Defense: ITA`;
 
-  // ⚡ TIMEOUT PROTECTION - Max 5 seconds for AI
-  const generatePromise = model.generateContent(prompt);
-  const timeoutPromise = new Promise((_, reject) => 
-    setTimeout(() => reject(new Error('Gemini timeout')), 5000)
-  );
-  
-  const res = await Promise.race([generatePromise, timeoutPromise]) as any;
-  let content = res.response.text() || '';
+  try {
+    // ⚡ TIMEOUT PROTECTION - Max 5 seconds for AI
+    const generatePromise = model.generateContent(prompt);
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Gemini timeout')), 5000)
+    );
+    
+    const res = await Promise.race([generatePromise, timeoutPromise]) as any;
+    let content = res.response.text() || '';
 
-  const m = content.match(/\{[\s\S]*\}/);
-  const jsonStr = m ? m[0] : content.trim();
+    const m = content.match(/\{[\s\S]*\}/);
+    const jsonStr = m ? m[0] : content.trim();
 
-  let out: any = {};
-  try { out = JSON.parse(jsonStr); } catch { out = {}; }
+    let out: any = {};
+    try { out = JSON.parse(jsonStr); } catch { out = {}; }
 
-  let tickers: string[] = Array.isArray(out.tickers) ? out.tickers : [];
-  tickers = tickers.map(t => String(t).toUpperCase()).filter(t => SAFE_TICKERS.has(t)).slice(0, 3); // Reduced to 3 for focus
-  
-  const summary: string = out.summary || 'No clear market impact identified.';
-  const relevanceScore: number = Number(out.relevanceScore) || 5;
-  
-  // Enhanced relevance validation - if relevance is low, use broader market tickers
-  if (tickers.length === 0 || relevanceScore < 4) {
-    tickers = getRelevantTickersFromText(text);
+    let tickers: string[] = Array.isArray(out.tickers) ? out.tickers : [];
+    tickers = tickers.map(t => String(t).toUpperCase()).filter(t => SAFE_TICKERS.has(t)).slice(0, 3); // Reduced to 3 for focus
+    
+    const summary: string = out.summary || 'No clear market impact identified.';
+    const relevanceScore: number = Number(out.relevanceScore) || 5;
+    
+    // Enhanced relevance validation - if relevance is low, use broader market tickers
+    if (tickers.length === 0 || relevanceScore < 4) {
+      tickers = getRelevantTickersFromText(text);
+    }
+    
+    const processingTime = Date.now() - startTime;
+    console.log(`⚡ Gemini AI analysis completed in ${processingTime}ms`);
+    
+    // Update monitoring status for successful analysis
+    try {
+      const { getMonitor } = await import('./monitoring.js');
+      const monitor = getMonitor();
+      monitor.setConnectionStatus('gemini', true);
+      console.log('📊 Updated Gemini status to connected');
+    } catch (error: any) {
+      console.log('⚠️ Could not update Gemini monitoring status:', error?.message || error);
+    }
+    
+    return { summary, tickers, relevanceScore };
+    
+  } catch (error) {
+    console.error('❌ Gemini analysis failed:', error);
+    
+    // Update monitoring status for failed analysis
+    try {
+      const { getMonitor } = await import('./monitoring.js');
+      const monitor = getMonitor();
+      monitor.setConnectionStatus('gemini', false);
+      console.log('📊 Updated Gemini status to disconnected due to error');
+    } catch (monitorError: any) {
+      console.log('⚠️ Could not update Gemini error status:', monitorError?.message || monitorError);
+    }
+    
+    // Fallback to text-based analysis
+    return getMockAnalysis(text);
   }
-  
-  const processingTime = Date.now() - startTime;
-  console.log(`⚡ Gemini AI analysis completed in ${processingTime}ms`);
-  
-  return { summary, tickers, relevanceScore };
 }
 
 // Mock analysis for testing without API key
