@@ -5,9 +5,9 @@ module.exports = {
     instances: 1,
     autorestart: true,
     watch: false,
-    max_memory_restart: '500M', // Lower memory limit to force restarts
-    node_args: ['--expose-gc', '--max-old-space-size=400'], // Lower memory limit for more aggressive GC
-    interpreter_args: '--expose-gc --max-old-space-size=400',
+    max_memory_restart: '250M', // Much lower memory limit 
+    node_args: ['--expose-gc', '--max-old-space-size=200', '--optimize-for-size'], // Aggressive memory optimization
+    interpreter_args: '--expose-gc --max-old-space-size=200 --optimize-for-size',
     env: {
       NODE_ENV: 'development',
       PORT: 8080

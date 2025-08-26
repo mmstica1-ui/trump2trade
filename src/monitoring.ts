@@ -156,9 +156,9 @@ class SystemMonitor {
     const recentCriticalErrors = this.recentErrors.filter(e => 
       Date.now() - e.timestamp.getTime() < 5 * 60 * 1000).length;
     
-    if (memPercentage > 98 || recentCriticalErrors > 10) {
+    if (memPercentage > 99 || recentCriticalErrors > 10) {
       status = 'critical';
-    } else if (memPercentage > 95 || 
+    } else if (memPercentage > 97 || 
                !this.connections.telegram ||
                recentCriticalErrors > 3 ||
                (this.lastPostTime && Date.now() - this.lastPostTime.getTime() > 60 * 60 * 1000)) {
@@ -184,8 +184,8 @@ class SystemMonitor {
     const memUsage = process.memoryUsage();
     const memPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
     
-    // Memory management with realistic thresholds 
-    if (memPercentage > 95) {
+    // Memory management with emergency thresholds 
+    if (memPercentage > 97) {
       // Clear old errors first to free memory
       this.cleanupOldErrors();
       
@@ -200,7 +200,7 @@ class SystemMonitor {
         log.info(`Memory after GC: ${Math.round(newMemPercentage)}%`);
         
         // If still high after GC, it's a real problem
-        if (newMemPercentage > 95) {
+        if (newMemPercentage > 97) {
           await this.sendCriticalAlert(
             `🆘 CRITICAL MEMORY LEAK\n\n` +
             `Memory: ${Math.round(newMemPercentage)}% after GC\n` +
@@ -210,7 +210,7 @@ class SystemMonitor {
         }
       } else {
         // No GC available, send warning at higher threshold
-        if (memPercentage > 97) {
+        if (memPercentage > 99) {
           await this.sendWarningAlert(
             `🧠 High Memory Usage: ${Math.round(memPercentage)}%\n\n` +
             `Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(1)}MB\n` +
