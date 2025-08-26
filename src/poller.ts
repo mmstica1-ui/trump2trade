@@ -103,8 +103,32 @@ export function startTruthPoller() {
 
         const postUrl = `${url.replace(/\/$/,'')}/post/${newestId}`;
 
+        // Capture timing for delay analysis  
+        const postDiscoveredAt = new Date();
+        log.info({ postId: newestId, discoveredAt: postDiscoveredAt.toISOString() }, 'Post discovered, starting analysis');
+
+        const analysisStartTime = Date.now();
         const analysis = await analyzePost(text);
-        await sendTrumpAlert({ summary: analysis.summary, tickers: analysis.tickers, url: postUrl });
+        const analysisEndTime = Date.now();
+        
+        const telegramStartTime = Date.now();
+        await sendTrumpAlert({ 
+          summary: analysis.summary, 
+          tickers: analysis.tickers, 
+          url: postUrl, 
+          originalPost: text,
+          postDiscoveredAt,
+          analysisTimeMs: analysisEndTime - analysisStartTime,
+          relevanceScore: analysis.relevanceScore
+        });
+        const telegramEndTime = Date.now();
+        
+        log.info({ 
+          postId: newestId,
+          analysisTimeMs: analysisEndTime - analysisStartTime,
+          telegramTimeMs: telegramEndTime - telegramStartTime,
+          totalProcessingMs: telegramEndTime - analysisStartTime
+        }, 'Post processing completed');
 
         lastPostId = newestId;
         okStreak++;

@@ -32,7 +32,8 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
     summary: analysis.summary, 
     tickers: analysis.tickers, 
     url,
-    originalPost: text 
+    originalPost: text,
+    relevanceScore: analysis.relevanceScore
   });
   res.json({ ok: true });
 });

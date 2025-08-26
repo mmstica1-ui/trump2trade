@@ -19,7 +19,21 @@ export function sendText(text: string) {
   });
 }
 
-export async function sendTrumpAlert(args: { summary: string; tickers: string[]; url: string; originalPost?: string }) {
+export async function sendTrumpAlert(args: { 
+  summary: string; 
+  tickers: string[]; 
+  url: string; 
+  originalPost?: string; 
+  timestamp?: Date;
+  postDiscoveredAt?: Date;
+  analysisTimeMs?: number;
+  relevanceScore?: number;
+}) {
+  const alertTime = args.timestamp || new Date();
+  const postDiscoveredAt = args.postDiscoveredAt || alertTime;
+  const analysisTimeMs = args.analysisTimeMs || 0;
+  const relevanceScore = args.relevanceScore || 5;
+  
   // Build inline keyboard with Call/Put buttons for each ticker
   const kb = new InlineKeyboard();
   
@@ -31,30 +45,57 @@ export async function sendTrumpAlert(args: { summary: string; tickers: string[];
   // Add manual trading button and preview button
   kb.text('📈 Manual Trading', JSON.stringify({ a: 'manual_trade' }));
   kb.text('🧪 Preview (no trade)', JSON.stringify({ a: 'preview' })).row();
-
-  // Build comprehensive message
-  let message = `🦅 <b>Trump Post → Trade Alert</b>\n\n`;
   
-  // Add original post if provided
+  // Add prominent link button to original post
+  kb.url('🔗 View Original Post', args.url).row();
+
+  // Calculate processing delays
+  const processingDelayMs = alertTime.getTime() - postDiscoveredAt.getTime();
+  
+  // Build comprehensive message with detailed timing
+  let message = `🦅 <b>Trump Post → Trade Alert</b>\n`;
+  message += `⏰ <b>Alert Sent:</b> ${alertTime.toLocaleString('en-US', { 
+    timeZone: 'UTC',
+    year: 'numeric',
+    month: '2-digit', 
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })} UTC\n`;
+  
+  // Add processing time details if available
+  if (postDiscoveredAt !== alertTime) {
+    message += `📊 <b>Processing:</b> ${Math.round(processingDelayMs/1000)}s total`;
+    if (analysisTimeMs > 0) {
+      message += ` (AI: ${Math.round(analysisTimeMs/1000)}s)`;
+    }
+    message += `\n`;
+  }
+  message += `\n`;
+  
+  // Add original post if provided (more prominent)
   if (args.originalPost) {
-    const truncatedPost = args.originalPost.length > 200 
-      ? args.originalPost.substring(0, 200) + '...' 
+    const truncatedPost = args.originalPost.length > 250 
+      ? args.originalPost.substring(0, 250) + '...' 
       : args.originalPost;
-    message += `📝 <b>Original Post:</b>\n<i>"${truncatedPost}"</i>\n\n`;
+    message += `📝 <b>Original Trump Post:</b>\n<blockquote>"${truncatedPost}"</blockquote>\n`;
   }
   
   // Add analysis summary
-  message += `🧠 <b>AI Analysis:</b>\n${args.summary}\n\n`;
+  message += `🧠 <b>Market Impact Analysis:</b>\n${args.summary}\n\n`;
   
-  // Add relevant tickers
-  message += `📊 <b>Relevant Tickers:</b> ${args.tickers.join(', ')}\n\n`;
+  // Add relevant tickers with relevance indicator
+  const relevanceEmoji = relevanceScore >= 8 ? '🎯' : relevanceScore >= 6 ? '🟢' : '🟡';
+  message += `📊 <b>Trading Opportunities:</b> <code>${args.tickers.join(' | ')}</code> ${relevanceEmoji}${relevanceScore}/10\n\n`;
   
-  // Add source link
-  message += `🔗 <b>Source:</b> <a href="${args.url}">Truth Social Post</a>`;
+  // Add direct link text for backup
+  message += `🔗 <a href="${args.url}">Direct Link to Truth Social Post</a>`;
 
   return bot.api.sendMessage(chatId, message, { 
     parse_mode: 'HTML', 
-    reply_markup: kb
+    reply_markup: kb,
+    link_preview_options: { is_disabled: false }
   });
 }
 
