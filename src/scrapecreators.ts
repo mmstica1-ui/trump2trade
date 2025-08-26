@@ -50,7 +50,7 @@ async function fetchTrumpPosts(): Promise<TruthSocialPost[]> {
 
   try {
     const username = 'realDonaldTrump'; // Trump's Truth Social username
-    const endpoint = `https://api.scrapecreators.com/v1/truth-social/user/posts`;
+    const endpoint = `https://api.scrapecreators.com/v1/truthsocial/posts`;
     
     log.debug({ username, endpoint }, 'Fetching posts from Scrape Creators API');
     
@@ -60,22 +60,30 @@ async function fetchTrumpPosts(): Promise<TruthSocialPost[]> {
         'User-Agent': 'Trump2Trade/1.0'
       },
       params: {
-        username: username,
+        handle: username, // Correct parameter name is 'handle', not 'username'
         limit: 10 // Get latest 10 posts
       },
       timeout: 15000
     });
 
-    if (!response.data || !Array.isArray(response.data.posts)) {
+    // Handle different response structures - could be array or object with posts property
+    let posts = [];
+    if (Array.isArray(response.data)) {
+      posts = response.data;
+    } else if (response.data && Array.isArray(response.data.posts)) {
+      posts = response.data.posts;
+    } else if (response.data && Array.isArray(response.data.data)) {
+      posts = response.data.data;
+    } else {
       log.warn({ data: response.data }, 'Unexpected API response format');
       return [];
     }
 
-    return response.data.posts.map((post: any) => ({
-      id: post.id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-      text: post.content || post.text || '',
-      url: post.url || `https://truthsocial.com/@realDonaldTrump/posts/${post.id}`,
-      created_at: post.created_at || new Date().toISOString(),
+    return posts.map((post: any) => ({
+      id: post.id || post.post_id || `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: post.content || post.text || post.body || '',
+      url: post.url || post.link || `https://truthsocial.com/@realDonaldTrump/posts/${post.id}`,
+      created_at: post.created_at || post.timestamp || new Date().toISOString(),
       user: {
         username: post.user?.username || 'realDonaldTrump'
       }
