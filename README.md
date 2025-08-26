@@ -9,7 +9,7 @@
 ### תנאים מוקדמים:
 1. [Telegram Bot](./SETUP_TELEGRAM.md) - בוט וchat ID
 2. [Gemini API](./SETUP_GEMINI.md) - מפתח API מGoogle
-3. **Synoptic API** - מפתח API לWebSocket (מקור נתונים ראשי)
+3. **Scrape Creators API** - מפתח API לTruth Social (מקור נתונים ראשי)
 4. [Apify Actor](./SETUP_APIFY.md) - גירוד Truth Social (גיבוי)
 
 ### הרצה מהירה:
@@ -42,7 +42,7 @@ curl -X POST http://localhost:8080/dev/mock \
 
 - [📱 Telegram Setup](./SETUP_TELEGRAM.md)
 - [🧠 Gemini API Setup](./SETUP_GEMINI.md)  
-- [🌐 **Synoptic WebSocket Setup**](./SETUP_SYNOPTIC.md) ⭐ **ראשי**
+- [🎯 **Scrape Creators API Setup**](./SETUP_SCRAPECREATORS.md) ⭐ **ראשי**
 - [🕷️ Apify Actor Setup](./SETUP_APIFY.md) (גיבוי)
 - [📈 IBKR Gateway Setup](./SETUP_IBKR.md) (אופציונלי)
 
@@ -55,8 +55,8 @@ curl -X POST http://localhost:8080/dev/mock \
 
 ## 📊 תכונות
 
-- ✅ **WebSocket בזמן אמת** מ-Synoptic API
-- ✅ ניטור אוטומטי של פוסטים בTruth Social
+- ✅ **API אמיתי לTruth Social** מ-Scrape Creators
+- ✅ ניטור אוטומטי של פוסטים בזמן קצר (30 שניות)
 - ✅ ניתוח עם Gemini AI
 - ✅ המלצות טיקרים מסונכרנות
 - ✅ ממשק Telegram עם כפתורי מסחר
@@ -64,12 +64,12 @@ curl -X POST http://localhost:8080/dev/mock \
 - ✅ מצב בטוח עם preview
 - ✅ מערכת גיבוי פולינג + Apify
 - ✅ ניטור בריאות המערכת
-- ✅ חיבור מחדש אוטומטי ל-WebSocket
+- ✅ Deduplication אוטומטי
 
 ## 🔄 תהליך העבודה
 
-### מקור ראשי - Synoptic WebSocket:
-1. **Synoptic WebSocket** מזרים פוסטים בזמן אמת
+### מקור ראשי - Scrape Creators API:
+1. **Scrape Creators Polling** מביא פוסטים כל 30 שניות
 2. **Deduplication** מונע עיבוד כפול
 3. **Gemini** מנתח הפוסט ומזהה השפעות שוק
 4. **Telegram** שולח התרעה עם כפתורי מסחר
@@ -93,9 +93,8 @@ curl http://localhost:8080/healthz
 # בטיחות
 DISABLE_TRADES=true          # מצב בטוח
 
-# Synoptic WebSocket (ראשי)
-SYNOPTIC_API_KEY=your-api-key    # מפתח Synoptic
-SYNOPTIC_WS=wss://api.synoptic.com/v1/ws/on-stream-post
+# Scrape Creators API (ראשי)
+SCRAPECREATORS_API_KEY=your-api-key    # מפתח Scrape Creators
 
 # גיבוי
 POLL_ENABLED=true           # גיבוי לApify  
