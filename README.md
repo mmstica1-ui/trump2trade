@@ -9,7 +9,8 @@
 ### תנאים מוקדמים:
 1. [Telegram Bot](./SETUP_TELEGRAM.md) - בוט וchat ID
 2. [Gemini API](./SETUP_GEMINI.md) - מפתח API מGoogle
-3. [Apify Actor](./SETUP_APIFY.md) - גירוד Truth Social
+3. **Synoptic API** - מפתח API לWebSocket (מקור נתונים ראשי)
+4. [Apify Actor](./SETUP_APIFY.md) - גירוד Truth Social (גיבוי)
 
 ### הרצה מהירה:
 ```bash
@@ -41,7 +42,8 @@ curl -X POST http://localhost:8080/dev/mock \
 
 - [📱 Telegram Setup](./SETUP_TELEGRAM.md)
 - [🧠 Gemini API Setup](./SETUP_GEMINI.md)  
-- [🕷️ Apify Actor Setup](./SETUP_APIFY.md)
+- [🌐 **Synoptic WebSocket Setup**](./SETUP_SYNOPTIC.md) ⭐ **ראשי**
+- [🕷️ Apify Actor Setup](./SETUP_APIFY.md) (גיבוי)
 - [📈 IBKR Gateway Setup](./SETUP_IBKR.md) (אופציונלי)
 
 ## 🔒 בטיחות
@@ -53,22 +55,29 @@ curl -X POST http://localhost:8080/dev/mock \
 
 ## 📊 תכונות
 
+- ✅ **WebSocket בזמן אמת** מ-Synoptic API
 - ✅ ניטור אוטומטי של פוסטים בTruth Social
 - ✅ ניתוח עם Gemini AI
 - ✅ המלצות טיקרים מסונכרנות
 - ✅ ממשק Telegram עם כפתורי מסחר
 - ✅ תמיכה במסחר אופציות דרך IBKR
 - ✅ מצב בטוח עם preview
-- ✅ מערכת גיבוי פולינג
+- ✅ מערכת גיבוי פולינג + Apify
 - ✅ ניטור בריאות המערכת
+- ✅ חיבור מחדש אוטומטי ל-WebSocket
 
 ## 🔄 תהליך העבודה
 
-1. **Apify Actor** גורד Truth Social כל כמה דקות
-2. **Webhook** שולח פוסטים חדשים לשירות שלנו
+### מקור ראשי - Synoptic WebSocket:
+1. **Synoptic WebSocket** מזרים פוסטים בזמן אמת
+2. **Deduplication** מונע עיבוד כפול
 3. **Gemini** מנתח הפוסט ומזהה השפעות שוק
 4. **Telegram** שולח התרעה עם כפתורי מסחר
 5. **IBKR** (אופציונלי) מבצע עסקאות אמיתיות
+
+### גיבוי - Apify Webhook:
+- **Apify Actor** גורד Truth Social כגיבוי
+- **Webhook** שולח פוסטים חדשים לשירות שלנו
 
 ## 🐞 Debug
 
@@ -81,9 +90,17 @@ curl http://localhost:8080/healthz
 ## ⚙️ משתני סביבה חשובים
 
 ```bash
+# בטיחות
 DISABLE_TRADES=true          # מצב בטוח
+
+# Synoptic WebSocket (ראשי)
+SYNOPTIC_API_KEY=your-api-key    # מפתח Synoptic
+SYNOPTIC_WS=wss://api.synoptic.com/v1/ws/on-stream-post
+
+# גיבוי
 POLL_ENABLED=true           # גיבוי לApify  
 APIFY_WEBHOOK_SECRET=moshe454   # חתימת webhook
+GENSPARK_WEBHOOK_SECRET=moshe454 # webhook נוסף
 ```
 
 ---
