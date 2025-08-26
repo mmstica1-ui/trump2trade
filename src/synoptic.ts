@@ -29,13 +29,18 @@ function isDuplicate(postId: string): boolean {
 
 function extractPostData(data: any): { text: string; url: string; postId: string } | null {
   try {
-    // Handle different possible data structures from Synoptic
+    // 🔄 SYNOPTIC FORMAT FIX: Handle the actual Synoptic event format
     let postData = data;
     
-    // If data is wrapped in additional layers, unwrap it
-    if (data.data) postData = data.data;
-    if (data.post) postData = data.post;
-    if (data.message) postData = data.message;
+    // Synoptic sends: { event: 'stream.post.created', data: {...} }
+    if (data.event === 'stream.post.created' && data.data) {
+      postData = data.data;
+      log.info({ synopticId: postData.id, text: postData.text?.substring(0, 100) }, '🔍 Extracting from Synoptic event format');
+    }
+    // Legacy formats
+    else if (data.data) postData = data.data;
+    else if (data.post) postData = data.post;
+    else if (data.message) postData = data.message;
     
     // Extract text content from various possible fields
     const text = postData.text || 
@@ -58,12 +63,27 @@ function extractPostData(data: any): { text: string; url: string; postId: string
                    postData.uid ||
                    `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     
+    // 🕰️ Extract original post timestamp from Synoptic data
+    let originalTimestamp: Date | undefined;
+    if (postData.createdAt) {
+      originalTimestamp = new Date(postData.createdAt);
+      log.info({ 
+        postId, 
+        originalTime: originalTimestamp.toISOString() 
+      }, '⏰ Got original post timestamp from Synoptic');
+    }
+    
     if (!text || text.trim().length === 0) {
       log.debug('No valid text content found in post data');
       return null;
     }
     
-    return { text: text.trim(), url, postId: String(postId) } as any;
+    return { 
+      text: text.trim(), 
+      url, 
+      postId: String(postId),
+      originalTimestamp 
+    } as any;
   } catch (error) {
     log.error({ error, data }, 'Error extracting post data');
     return null;
@@ -126,14 +146,32 @@ function connectToSynoptic() {
         return;
       }
       
-      if (parsed.type !== 'post' && parsed.type !== 'message') {
-        log.debug({ type: parsed.type }, 'Ignoring non-post message');
+      // 🔴 CRITICAL FIX: Handle Synoptic's actual event format
+      const isPostEvent = parsed.event === 'stream.post.created' || 
+                         parsed.type === 'post' || 
+                         parsed.type === 'message';
+      
+      if (!isPostEvent) {
+        log.debug({ 
+          event: parsed.event, 
+          type: parsed.type 
+        }, 'Ignoring non-post message');
         return;
       }
       
+      // 🎯 FOUND TRUMP POST!
+      log.info({ 
+        event: parsed.event, 
+        postId: parsed.data?.id,
+        text: parsed.data?.text?.substring(0, 100) 
+      }, '🔥 TRUMP POST DETECTED from Synoptic!');
+      
       const postData = extractPostData(parsed);
       if (!postData) {
-        log.debug('Could not extract valid post data');
+        log.warn({ 
+          event: parsed.event, 
+          dataKeys: Object.keys(parsed.data || {})
+        }, '⚠️ Could not extract valid post data from Synoptic event');
         return;
       }
       
