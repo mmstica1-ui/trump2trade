@@ -45,7 +45,30 @@ export async function handleGensparkWebhook(req: Request, res: Response) {
     return res.json({ ok: true, skipped: 'duplicate' });
   }
 
+  // Capture timing for webhook processing
+  const webhookReceivedAt = new Date();
+  
+  const analysisStartTime = Date.now();
   const analysis = await analyzePost(text);
-  await sendTrumpAlert({ summary: analysis.summary, tickers: analysis.tickers, url });
-  return res.json({ ok: true });
+  const analysisEndTime = Date.now();
+  
+  await sendTrumpAlert({ 
+    summary: analysis.summary, 
+    tickers: analysis.tickers, 
+    url,
+    originalPost: text,
+    postDiscoveredAt: webhookReceivedAt,
+    analysisTimeMs: analysisEndTime - analysisStartTime,
+    relevanceScore: analysis.relevanceScore
+  });
+  
+  return res.json({ 
+    ok: true, 
+    processed: {
+      postId: post_id,
+      analysisTimeMs: analysisEndTime - analysisStartTime,
+      tickers: analysis.tickers,
+      relevanceScore: analysis.relevanceScore
+    }
+  });
 }

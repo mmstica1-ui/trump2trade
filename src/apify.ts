@@ -14,8 +14,32 @@ export async function handleApifyWebhook(req: Request, res: Response) {
   if (!parsed.success) return res.status(400).json({ ok: false, error: parsed.error.message });
 
   const { text, url } = parsed.data;
+  
+  // Capture timing for webhook processing
+  const webhookReceivedAt = new Date();
+  
+  const analysisStartTime = Date.now();
   const analysis = await analyzePost(text);
+  const analysisEndTime = Date.now();
+  
   markApifyHit();
-  await sendTrumpAlert({ summary: analysis.summary, tickers: analysis.tickers, url });
-  return res.json({ ok: true });
+  
+  await sendTrumpAlert({ 
+    summary: analysis.summary, 
+    tickers: analysis.tickers, 
+    url,
+    originalPost: text,
+    postDiscoveredAt: webhookReceivedAt,
+    analysisTimeMs: analysisEndTime - analysisStartTime,
+    relevanceScore: analysis.relevanceScore
+  });
+  
+  return res.json({ 
+    ok: true,
+    processed: {
+      analysisTimeMs: analysisEndTime - analysisStartTime,
+      tickers: analysis.tickers,
+      relevanceScore: analysis.relevanceScore
+    }
+  });
 }

@@ -1,6 +1,22 @@
 import 'dotenv/config';
 import express from 'express';
 import pino from 'pino';
+
+// Environment validation
+const requiredEnvVars = {
+  TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
+  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+};
+
+// Check critical environment variables
+const missingVars = Object.entries(requiredEnvVars)
+  .filter(([key, value]) => !value || value === `your-${key.toLowerCase().replace('_', '-')}-here`)
+  .map(([key]) => key);
+
+if (missingVars.length > 0) {
+  console.warn(`⚠️  Missing environment variables: ${missingVars.join(', ')}`);
+  console.warn('System will run in limited mode. Set proper values for full functionality.');
+}
 import bot, { sendText } from './tg.js';
 import { scheduleDailyStats } from './stats.js';
 import { startOpsSelfChecks } from './ops.js';
@@ -73,11 +89,27 @@ app.listen(PORT, async () => {
   // Send startup message only if enough time has passed (prevents Railway redeploy spam)
   const now = Date.now();
   const lastStartupTime = getLastStartupTime();
+  const isProduction = process.env.NODE_ENV === 'production';
   
   if (now - lastStartupTime > STARTUP_MSG_THROTTLE_MS) {
     saveStartupTime(now);
-    await sendText('🧪 Trump2Trade TESTING MODE is live with Synoptic WebSocket. Use /help');
-    log.info('Startup message sent to Telegram');
+    try {
+      const mode = isProduction ? 'PRODUCTION' : 'DEVELOPMENT';
+      const features = [];
+      if (process.env.SYNOPTIC_API_KEY) features.push('Synoptic WebSocket');
+      if (process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'your-google-api-key-here') features.push('Gemini AI');
+      if (process.env.POLL_ENABLED === 'true') features.push('Truth Polling');
+      
+      const message = `🦅 Trump2Trade ${mode} MODE is live!\n\n` +
+        `🔧 Active Features: ${features.join(', ') || 'Basic webhook support'}\n` +
+        `📡 Listening for posts on /webhook/genspark and /webhook/apify\n\n` +
+        `Use /help for commands`;
+      
+      await sendText(message);
+      log.info('Startup message sent to Telegram');
+    } catch (error) {
+      log.warn({ error: (error as any)?.message || error }, 'Failed to send startup message - continuing anyway');
+    }
   } else {
     log.info({ 
       timeSinceLastMs: now - lastStartupTime,

@@ -146,17 +146,30 @@ function connectToSynoptic() {
       
       log.info({ postId, text: text.substring(0, 100) }, 'Processing new Trump post from Synoptic');
       
-      // Analyze the post with Gemini
-      const analysis = await analyzePost(text);
+      // Capture timing for WebSocket processing
+      const postReceivedAt = new Date();
       
-      // Send Telegram alert
+      const analysisStartTime = Date.now();
+      const analysis = await analyzePost(text);
+      const analysisEndTime = Date.now();
+      
+      // Send enhanced Telegram alert
       await sendTrumpAlert({
         summary: analysis.summary,
         tickers: analysis.tickers,
-        url
+        url,
+        originalPost: text,
+        postDiscoveredAt: postReceivedAt,
+        analysisTimeMs: analysisEndTime - analysisStartTime,
+        relevanceScore: analysis.relevanceScore
       });
       
-      log.info({ postId, tickers: analysis.tickers }, 'Successfully processed Trump post');
+      log.info({ 
+        postId, 
+        tickers: analysis.tickers,
+        analysisTimeMs: analysisEndTime - analysisStartTime,
+        relevanceScore: analysis.relevanceScore
+      }, 'Successfully processed Trump post from Synoptic');
       
     } catch (error) {
       log.error({ error, data: data.toString() }, 'Error processing WebSocket message');
