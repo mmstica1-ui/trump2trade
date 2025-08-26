@@ -7,6 +7,7 @@ import { startOpsSelfChecks } from './ops.js';
 import { startTruthPoller } from './poller.js';
 import { handleApifyWebhook } from './apify.js';
 import { handleGensparkWebhook } from './genspark.js';
+import { startSynopticListener } from './synoptic.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -38,5 +39,6 @@ app.listen(PORT, () => {
   scheduleDailyStats();
   startOpsSelfChecks();
   startTruthPoller();
-  sendText('🚀 Trump2Trade is live. Use /help');
+  startSynopticListener(); // Start the Synoptic WebSocket listener
+  sendText('🚀 Trump2Trade is live with Synoptic WebSocket. Use /help');
 });
