@@ -28,14 +28,21 @@ export function startOpsSelfChecks() {
 }
 
 export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolean}> {
-  const appUrl = process.env.APP_URL || 'https://web-production-918d1.up.railway.app';
-  let appOk = false, ibkrOk = false;
-  try {
-    if (appUrl) {
-      const r = await axios.get(`${appUrl}/health`, { timeout: 5000 });
-      appOk = !!r.data?.ok || r.status === 200;
-    } else { appOk = true; }
-  } catch {}
+  // For local health check, don't call external URL to avoid circular dependency  
+  let appOk = true, ibkrOk = false; // Assume app is OK if we can execute this function
+  
+  // Only check external health if we have a different URL than ourselves
+  const appUrl = process.env.APP_URL;
+  const isExternalCheck = appUrl && !appUrl.includes('localhost') && appUrl !== process.env.INTERNAL_URL;
+  
+  if (isExternalCheck) {
+    try {
+      const r = await axios.get(`${appUrl}/healthz`, { timeout: 3000 }); // Use legacy endpoint for external check
+      appOk = r.status === 200;
+    } catch {
+      appOk = false; // External service is down
+    }
+  }
   try {
     const base = process.env.IBKR_BASE_URL;
     if (base) {

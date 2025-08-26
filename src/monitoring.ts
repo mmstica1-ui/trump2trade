@@ -152,12 +152,15 @@ class SystemMonitor {
     
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
     
-    // Determine status
-    if (memPercentage > 90 || this.recentErrors.filter(e => 
-      Date.now() - e.timestamp.getTime() < 5 * 60 * 1000).length > 5) {
+    // Determine status with more forgiving memory thresholds
+    const recentCriticalErrors = this.recentErrors.filter(e => 
+      Date.now() - e.timestamp.getTime() < 5 * 60 * 1000).length;
+    
+    if (memPercentage > 98 || recentCriticalErrors > 10) {
       status = 'critical';
-    } else if (memPercentage > 70 || 
+    } else if (memPercentage > 85 || 
                !this.connections.telegram ||
+               recentCriticalErrors > 3 ||
                (this.lastPostTime && Date.now() - this.lastPostTime.getTime() > 60 * 60 * 1000)) {
       status = 'warning';  
     }
@@ -181,7 +184,11 @@ class SystemMonitor {
     const memUsage = process.memoryUsage();
     const memPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
     
-    if (memPercentage > 85) {
+    // Aggressive memory management
+    if (memPercentage > 80) {
+      // Clear old errors first to free memory
+      this.cleanupOldErrors();
+      
       // Force garbage collection if available
       if (global.gc) {
         global.gc();
@@ -191,17 +198,27 @@ class SystemMonitor {
         const newMemUsage = process.memoryUsage();
         const newMemPercentage = (newMemUsage.heapUsed / newMemUsage.heapTotal) * 100;
         log.info(`Memory after GC: ${Math.round(newMemPercentage)}%`);
+        
+        // If still high after GC, it's a real problem
+        if (newMemPercentage > 95) {
+          await this.sendCriticalAlert(
+            `🆘 CRITICAL MEMORY LEAK\n\n` +
+            `Memory: ${Math.round(newMemPercentage)}% after GC\n` +
+            `Heap Used: ${(newMemUsage.heapUsed / 1024 / 1024).toFixed(1)}MB\n` +
+            `May require restart!`
+          );
+        }
+      } else {
+        // No GC available, send warning at lower threshold
+        if (memPercentage > 90) {
+          await this.sendWarningAlert(
+            `🧠 High Memory Usage: ${Math.round(memPercentage)}%\n\n` +
+            `Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(1)}MB\n` +
+            `Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(1)}MB\n` +
+            `⚠️ GC not available - consider restart`
+          );
+        }
       }
-      
-      // Clear old errors to free memory
-      this.cleanupOldErrors();
-      
-      await this.sendWarningAlert(
-        `🧠 High Memory Usage: ${Math.round(memPercentage)}%\n\n` +
-        `Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(1)}MB\n` +
-        `Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(1)}MB\n` +
-        `${global.gc ? '♻️ Garbage collection forced' : '⚠️ GC not available'}`
-      );
     }
   }
 
