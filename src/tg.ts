@@ -2,6 +2,7 @@ import { Bot, InlineKeyboard } from 'grammy';
 import axios from 'axios';
 import { chooseTrade, InlineTradePayload } from './ibkr.js';
 import { getHealthSnapshot, toggleSafeMode, toggleSystemActive, runFullSystemCheck } from './ops.js';
+import { getMonitor } from './monitoring.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
@@ -117,7 +118,7 @@ export async function sendTrumpAlert(args: {
   });
 }
 
-bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /safe_mode on|off, /system on|off, /check'));
+bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /health, /monitor, /safe_mode on|off, /system on|off, /check'));
 bot.command('ping', ctx => ctx.reply('pong'));
 
 bot.on('callback_query:data', async ctx => {
@@ -179,6 +180,61 @@ bot.command('check', async (ctx) => {
   if (!adminOnly(ctx)) return;
   await ctx.reply('🔍 Running full system diagnostics...');
   await runFullSystemCheck();
+});
+
+
+// Monitoring commands
+bot.command('health', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const monitor = getMonitor();
+    const health = monitor.getSystemHealth();
+    
+    const statusIcon = health.status === 'healthy' ? '✅' : health.status === 'warning' ? '⚠️' : '🆘';
+    const uptimeHours = Math.floor(health.uptime / (1000 * 60 * 60));
+    const uptimeMins = Math.floor((health.uptime % (1000 * 60 * 60)) / (1000 * 60));
+    
+    const connectionStatus = Object.entries(health.connections)
+      .map(([service, status]) => `${service}: ${status ? '✅' : '❌'}`)
+      .join('\n');
+    
+    const message = `${statusIcon} <b>System Health Report</b>\n\n` +
+      `🔄 <b>Status:</b> ${health.status.toUpperCase()}\n` +
+      `⏱️ <b>Uptime:</b> ${uptimeHours}h ${uptimeMins}m\n` +
+      `🧠 <b>Memory:</b> ${health.memory.percentage}% used\n` +
+      `📊 <b>Alerts 24h:</b> ${health.alertsSent24h}\n` +
+      `🔗 <b>Connections:</b>\n${connectionStatus}\n` +
+      `🐛 <b>Recent Errors:</b> ${health.errors.length}\n` +
+      `📮 <b>Last Post:</b> ${health.lastPostProcessed ? 
+        new Date(health.lastPostProcessed).toLocaleString('he-IL') : 'Never'}`;
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
+  } catch (error) {
+    await ctx.reply(`❌ Health check failed: ${error}`);
+  }
+});
+
+bot.command('monitor', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const monitor = getMonitor();
+    const health = monitor.getSystemHealth();
+    
+    if (health.errors.length === 0) {
+      await ctx.reply('✅ No recent errors found');
+      return;
+    }
+    
+    const recentErrors = health.errors.slice(-5).map((error, index) => 
+      `${index + 1}. [${new Date(error.timestamp).toLocaleTimeString('he-IL')}] ${error.error}`
+    ).join('\n');
+    
+    const message = `🐛 <b>Recent System Errors (${health.errors.length} total)</b>\n\n` + recentErrors;
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
+  } catch (error) {
+    await ctx.reply(`❌ Monitor check failed: ${error}`);
+  }
 });
 
 export default bot;
