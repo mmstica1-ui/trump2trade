@@ -76,7 +76,7 @@ const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_DELAY_BASE = 1000; // Start with 1 second
 
 function connectToSynoptic() {
-  const wsUrl = process.env.SYNOPTIC_WS || 'wss://api.synoptic.com/v1/ws/on-stream-post';
+  const wsUrl = process.env.SYNOPTIC_WS || 'wss://api.synoptic.com/v1/ws';
   const apiKey = process.env.SYNOPTIC_API_KEY;
   
   if (!apiKey) {
@@ -86,8 +86,8 @@ function connectToSynoptic() {
   
   log.info('Connecting to Synoptic WebSocket...');
   
-  // Add API key as query parameter
-  const fullUrl = `${wsUrl}?api_key=${apiKey}`;
+  // Add API key as query parameter (correct format)
+  const fullUrl = `${wsUrl}/on-stream-post?apiKey=${apiKey}`;
   
   ws = new WebSocket(fullUrl);
   

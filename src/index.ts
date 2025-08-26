@@ -7,7 +7,7 @@ import { startOpsSelfChecks } from './ops.js';
 import { startTruthPoller } from './poller.js';
 import { handleApifyWebhook } from './apify.js';
 import { handleGensparkWebhook } from './genspark.js';
-// import { startScrapeCreatorsPoller } from './scrapecreators.js'; // Not working - 404 errors
+import { startSynopticListener } from './synoptic.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -39,6 +39,6 @@ app.listen(PORT, () => {
   scheduleDailyStats();
   startOpsSelfChecks();
   startTruthPoller();
-  // startScrapeCreatorsPoller(); // Not working - 404 errors
-  sendText('🚀 Trump2Trade is live. Use /help');
+  startSynopticListener(); // Start the corrected Synoptic WebSocket listener
+  sendText('🚀 Trump2Trade is live with corrected Synoptic WebSocket. Use /help');
 });
