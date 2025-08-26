@@ -134,6 +134,24 @@ app.listen(PORT, async () => {
   bot.start();
   monitor.setConnectionStatus('telegram', true);
   
+  // Initialize Gemini status check
+  const geminiApiKey = process.env.GOOGLE_API_KEY;
+  if (geminiApiKey && geminiApiKey !== 'your-google-api-key-here') {
+    // Test Gemini connection on startup
+    try {
+      const { analyzePost } = await import('./llm.js');
+      await analyzePost('Test connection');
+      monitor.setConnectionStatus('gemini', true);
+      log.info('Gemini AI connection verified on startup');
+    } catch (error) {
+      monitor.setConnectionStatus('gemini', false);
+      log.warn({ error }, 'Gemini AI connection failed on startup');
+    }
+  } else {
+    monitor.setConnectionStatus('gemini', false);
+    log.warn('Gemini API key not configured');
+  }
+  
   scheduleDailyStats();
   startOpsSelfChecks();
   startTruthPoller();
