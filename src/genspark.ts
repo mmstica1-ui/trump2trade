@@ -2,6 +2,45 @@ import type { Request, Response } from 'express';
 import { analyzePost } from './llm.js';
 import { sendTrumpAlert } from './tg.js';
 
+// ⚡ Fast fallback analysis without AI
+function getRelevantTickersFromText(text: string): { summary: string; tickers: string[]; relevanceScore: number } {
+  const textLower = text.toLowerCase();
+  
+  // China/Trade
+  if (textLower.includes('china') || textLower.includes('tariff') || textLower.includes('trade')) {
+    return {
+      summary: 'Trump China/trade policy - impacts Chinese equities and manufacturing',
+      tickers: ['FXI', 'ASHR', 'XLI'],
+      relevanceScore: 8
+    };
+  }
+  
+  // Tech
+  if (textLower.includes('tech') || textLower.includes('social') || textLower.includes('ai')) {
+    return {
+      summary: 'Tech regulation discussion - affects technology sector',
+      tickers: ['XLK', 'QQQ', 'META'],
+      relevanceScore: 7
+    };
+  }
+  
+  // Energy
+  if (textLower.includes('energy') || textLower.includes('oil') || textLower.includes('drill')) {
+    return {
+      summary: 'Energy policy changes - boosts energy sector',
+      tickers: ['XLE', 'USO'],
+      relevanceScore: 8
+    };
+  }
+  
+  // Default
+  return {
+    summary: 'General Trump policy statement - broad market impact',
+    tickers: ['SPY', 'QQQ'],
+    relevanceScore: 5
+  };
+}
+
 // ✅ זיכרון קצר למניעת כפילויות: מיפוי post_id -> timestamp
 const seen = new Map<string, number>();
 const DEDUP_TTL_MS = 24 * 60 * 60 * 1000; // 24 שעות

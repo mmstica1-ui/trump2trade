@@ -3,7 +3,17 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 const apiKey = process.env.GOOGLE_API_KEY!;
 const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 const genAI = new GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: modelName });
+
+// ⚡ OPTIMIZED MODEL CONFIG for fastest response
+const model = genAI.getGenerativeModel({ 
+  model: modelName,
+  generationConfig: {
+    temperature: 0.1, // Lower temperature for faster, more deterministic responses
+    topK: 10,         // Reduce token search space
+    topP: 0.8,        // Focus on high-probability tokens
+    maxOutputTokens: 200, // Limit response length for speed
+  },
+});
 
 // Enhanced ticker categories for better policy-to-market mapping
 const SAFE_TICKERS = new Set([
@@ -43,32 +53,35 @@ export async function analyzePost(text: string): Promise<{ summary: string; tick
     console.log('⚠️ Using mock analysis - no valid Google API key');
     return getMockAnalysis(text);
   }
-  const prompt = [
-    'You are an expert financial analyst specializing in Trump policy impact on markets.',
-    'Analyze this Trump post and identify specific, DIRECTLY RELEVANT market implications.',
-    '',
-    'CRITICAL REQUIREMENTS:',
-    '- ONLY select tickers that are DIRECTLY impacted by the specific content mentioned',
-    '- If the post mentions China/tariffs → FXI, ASHR, MCHI, XLI (manufacturing)',
-    '- If tech regulation/social media → XLK, META, GOOGL, NVDA',
-    '- If energy/drilling mentioned → XLE, USO, energy companies', 
-    '- If military/defense mentioned → ITA, defense contractors',
-    '- If taxes/corporate policy → SPY, QQQ, XLF',
-    '- If NO specific policy mentioned → use broad market: SPY, QQQ',
-    '',
-    'TICKER SELECTION RULES:',
-    '- Maximum 3 tickers for focused impact',
-    '- Each ticker must have clear relevance to the post content',
-    '- Avoid generic selections unless post is general market commentary',
-    '',
-    'Return ONLY JSON with keys: summary, tickers, relevanceScore (1-10)',
-    'Summary: 1-2 sentences explaining WHY these tickers are relevant.',
-    'relevanceScore: Rate how directly relevant tickers are to post content (1=weak, 10=perfect)',
-    '',
-    `Trump Post: "${text}"`
-  ].join('\n');
+  
+  // ⚡ SPEED OPTIMIZATION - Start timing
+  const startTime = Date.now();
+  // ⚡ ULTRA-FAST PROMPT - Minimal but precise
+  const prompt = `FAST ANALYSIS: Trump post market impact.
 
-  const res = await model.generateContent(prompt);
+Post: "${text.substring(0, 200)}" 
+
+Return JSON only:
+{
+  "summary": "1 sentence market impact",
+  "tickers": ["max 3 most relevant tickers"],
+  "relevanceScore": number_1_to_10
+}
+
+Rules:
+- China/trade: FXI,ASHR,XLI
+- Tech: XLK,META,GOOGL  
+- Energy: XLE,USO
+- General: SPY,QQQ
+- Defense: ITA`;
+
+  // ⚡ TIMEOUT PROTECTION - Max 5 seconds for AI
+  const generatePromise = model.generateContent(prompt);
+  const timeoutPromise = new Promise((_, reject) => 
+    setTimeout(() => reject(new Error('Gemini timeout')), 5000)
+  );
+  
+  const res = await Promise.race([generatePromise, timeoutPromise]) as any;
   let content = res.response.text() || '';
 
   const m = content.match(/\{[\s\S]*\}/);
@@ -87,6 +100,9 @@ export async function analyzePost(text: string): Promise<{ summary: string; tick
   if (tickers.length === 0 || relevanceScore < 4) {
     tickers = getRelevantTickersFromText(text);
   }
+  
+  const processingTime = Date.now() - startTime;
+  console.log(`⚡ Gemini AI analysis completed in ${processingTime}ms`);
   
   return { summary, tickers, relevanceScore };
 }

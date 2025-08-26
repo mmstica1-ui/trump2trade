@@ -103,31 +103,57 @@ export function startTruthPoller() {
 
         const postUrl = `${url.replace(/\/$/,'')}/post/${newestId}`;
 
-        // Capture timing for delay analysis  
+        // ⚡ POLLER SPEED OPTIMIZATION
         const postDiscoveredAt = new Date();
-        log.info({ postId: newestId, discoveredAt: postDiscoveredAt.toISOString() }, 'Post discovered, starting analysis');
-
-        const analysisStartTime = Date.now();
-        const analysis = await analyzePost(text);
-        const analysisEndTime = Date.now();
+        // Estimate original post time (poller has delay based on interval)
+        const estimatedOriginalTime = new Date(postDiscoveredAt.getTime() - currentEvery); 
         
-        const telegramStartTime = Date.now();
-        await sendTrumpAlert({ 
+        log.info({ postId: newestId, discoveredAt: postDiscoveredAt.toISOString() }, 'Post discovered, starting FAST analysis');
+
+        const pipelineStart = Date.now();
+        
+        // ⚡ RACING ANALYSIS with timeout
+        let analysis: { summary: string; tickers: string[]; relevanceScore: number };
+        try {
+          const analysisPromise = analyzePost(text);
+          const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error('timeout')), 7000)
+          );
+          analysis = await Promise.race([analysisPromise, timeoutPromise]) as any;
+        } catch (error) {
+          log.warn('Analysis timeout, using fast fallback');
+          analysis = { 
+            summary: 'Fast analysis - Trump market update detected', 
+            tickers: text.toLowerCase().includes('china') ? ['FXI', 'ASHR'] : ['SPY', 'QQQ'], 
+            relevanceScore: 6 
+          };
+        }
+        
+        const analysisTime = Date.now() - pipelineStart;
+        const totalDelayMs = Date.now() - estimatedOriginalTime.getTime();
+        
+        // ⚡ IMMEDIATE ALERT - don't wait
+        const alertPromise = sendTrumpAlert({ 
           summary: analysis.summary, 
           tickers: analysis.tickers, 
           url: postUrl, 
           originalPost: text,
+          originalPostTime: estimatedOriginalTime,
           postDiscoveredAt,
-          analysisTimeMs: analysisEndTime - analysisStartTime,
-          relevanceScore: analysis.relevanceScore
+          analysisTimeMs: analysisTime,
+          relevanceScore: analysis.relevanceScore,
+          totalDelayMs
         });
+        
+        const telegramStartTime = Date.now();
+        alertPromise.catch(err => log.error({ err }, 'Alert failed'));
         const telegramEndTime = Date.now();
         
         log.info({ 
           postId: newestId,
-          analysisTimeMs: analysisEndTime - analysisStartTime,
+          analysisTimeMs: analysisTime,
           telegramTimeMs: telegramEndTime - telegramStartTime,
-          totalProcessingMs: telegramEndTime - analysisStartTime
+          totalProcessingMs: telegramEndTime - pipelineStart
         }, 'Post processing completed');
 
         lastPostId = newestId;

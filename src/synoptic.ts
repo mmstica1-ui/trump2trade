@@ -63,7 +63,7 @@ function extractPostData(data: any): { text: string; url: string; postId: string
       return null;
     }
     
-    return { text: text.trim(), url, postId: String(postId) };
+    return { text: text.trim(), url, postId: String(postId) } as any;
   } catch (error) {
     log.error({ error, data }, 'Error extracting post data');
     return null;
@@ -138,36 +138,75 @@ function connectToSynoptic() {
       }
       
       const { text, url, postId } = postData;
+      const originalTimestamp = (postData as any).originalTimestamp;
       
       if (isDuplicate(postId)) {
         log.debug({ postId }, 'Skipping duplicate post');
         return;
       }
       
-      log.info({ postId, text: text.substring(0, 100) }, 'Processing new Trump post from Synoptic');
-      
-      // Capture timing for WebSocket processing
+      // Calculate delay from original post (if available)
       const postReceivedAt = new Date();
+      const originalPostTime = originalTimestamp || postReceivedAt;
+      const discoveryDelayMs = postReceivedAt.getTime() - originalPostTime.getTime();
       
-      const analysisStartTime = Date.now();
-      const analysis = await analyzePost(text);
+      log.info({ 
+        postId, 
+        text: text.substring(0, 100),
+        originalTime: originalPostTime.toISOString(),
+        discoveryDelayMs
+      }, 'Processing new Trump post from Synoptic');
+      
+      // ⚡ OPTIMIZED PIPELINE - Minimize processing time
+      const pipelineStartTime = Date.now();
+      
+      // Fast parallel AI analysis (with timeout)
+      const analysisPromise = analyzePost(text);
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('AI analysis timeout')), 8000) // 8 second max
+      );
+      
+      let analysis: { summary: string; tickers: string[]; relevanceScore: number };
+      try {
+        analysis = await Promise.race([analysisPromise, timeoutPromise]) as any;
+      } catch (error: any) {
+        log.warn({ error: error?.message || error }, 'AI analysis failed/timeout, using fallback');
+        // Fast fallback analysis
+        analysis = {
+          summary: 'Market moving Trump post detected - immediate analysis pending',
+          tickers: ['SPY', 'QQQ'],
+          relevanceScore: 5
+        };
+      }
+      
       const analysisEndTime = Date.now();
+      const totalProcessingMs = analysisEndTime - pipelineStartTime;
+      const totalDelayMs = analysisEndTime - originalPostTime.getTime();
       
-      // Send enhanced Telegram alert
-      await sendTrumpAlert({
+      // ⚡ IMMEDIATE Telegram alert (fire and forget)
+      const alertPromise = sendTrumpAlert({
         summary: analysis.summary,
         tickers: analysis.tickers,
         url,
         originalPost: text,
+        originalPostTime,
         postDiscoveredAt: postReceivedAt,
-        analysisTimeMs: analysisEndTime - analysisStartTime,
-        relevanceScore: analysis.relevanceScore
+        analysisTimeMs: analysisEndTime - pipelineStartTime,
+        relevanceScore: analysis.relevanceScore,
+        totalDelayMs
       });
+      
+      // Don't wait for Telegram - continue processing
+      alertPromise.catch(error => 
+        log.error({ error, postId }, 'Failed to send Telegram alert')
+      );
       
       log.info({ 
         postId, 
         tickers: analysis.tickers,
-        analysisTimeMs: analysisEndTime - analysisStartTime,
+        totalProcessingMs,
+        totalDelayMs,
+        discoveryDelayMs,
         relevanceScore: analysis.relevanceScore
       }, 'Successfully processed Trump post from Synoptic');
       

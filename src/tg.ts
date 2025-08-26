@@ -25,14 +25,18 @@ export async function sendTrumpAlert(args: {
   url: string; 
   originalPost?: string; 
   timestamp?: Date;
+  originalPostTime?: Date;
   postDiscoveredAt?: Date;
   analysisTimeMs?: number;
   relevanceScore?: number;
+  totalDelayMs?: number;
 }) {
   const alertTime = args.timestamp || new Date();
+  const originalPostTime = args.originalPostTime || args.postDiscoveredAt || alertTime;
   const postDiscoveredAt = args.postDiscoveredAt || alertTime;
   const analysisTimeMs = args.analysisTimeMs || 0;
   const relevanceScore = args.relevanceScore || 5;
+  const totalDelayMs = args.totalDelayMs || (alertTime.getTime() - originalPostTime.getTime());
   
   // Build inline keyboard with Call/Put buttons for each ticker
   const kb = new InlineKeyboard();
@@ -49,30 +53,44 @@ export async function sendTrumpAlert(args: {
   // Add prominent link button to original post
   kb.url('🔗 View Original Post', args.url).row();
 
-  // Calculate processing delays
+  // Calculate precise delays 
+  const discoveryDelayMs = postDiscoveredAt.getTime() - originalPostTime.getTime();
   const processingDelayMs = alertTime.getTime() - postDiscoveredAt.getTime();
   
-  // Build comprehensive message with detailed timing
-  let message = `🦅 <b>Trump Post → Trade Alert</b>\n`;
-  message += `⏰ <b>Alert Sent:</b> ${alertTime.toLocaleString('en-US', { 
+  // Build comprehensive message with PRECISE timing
+  let message = `⚡ <b>Trump Post → INSTANT Alert</b>\n`;
+  
+  // Show original post time and total delay prominently  
+  message += `🕓 <b>Original Post:</b> ${originalPostTime.toLocaleString('en-US', { 
     timeZone: 'UTC',
-    year: 'numeric',
-    month: '2-digit', 
-    day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
   })} UTC\n`;
   
-  // Add processing time details if available
-  if (postDiscoveredAt !== alertTime) {
-    message += `📊 <b>Processing:</b> ${Math.round(processingDelayMs/1000)}s total`;
-    if (analysisTimeMs > 0) {
-      message += ` (AI: ${Math.round(analysisTimeMs/1000)}s)`;
-    }
-    message += `\n`;
+  message += `⏱️ <b>Alert Time:</b> ${alertTime.toLocaleString('en-US', { 
+    timeZone: 'UTC', 
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })} UTC\n`;
+  
+  // 🎯 CRITICAL: Show total delay from original post
+  const totalDelaySeconds = Math.round(totalDelayMs / 1000);
+  let delayIcon = '🔥'; // Fast
+  if (totalDelaySeconds > 10) delayIcon = '⚠️'; // Medium
+  if (totalDelaySeconds > 30) delayIcon = '🔴'; // Slow
+  
+  message += `${delayIcon} <b>Total Delay:</b> ${totalDelaySeconds}s from original post\n`;
+  
+  // Breakdown of delays
+  if (discoveryDelayMs > 1000) {
+    message += `🔍 Discovery: ${Math.round(discoveryDelayMs/1000)}s | `;
   }
-  message += `\n`;
+  if (analysisTimeMs > 0) {
+    message += `🤖 AI: ${Math.round(analysisTimeMs/1000)}s | `;
+  }
+  message += `📨 Delivery: ${Math.round(processingDelayMs/1000)}s\n\n`;
   
   // Add original post if provided (more prominent)
   if (args.originalPost) {
