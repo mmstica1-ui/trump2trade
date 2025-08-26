@@ -2,8 +2,8 @@
   builder = "nixpacks"
   
 [deploy]
-  startCommand = "npm run build && npm start"
-  restartPolicyType = "always"
-  
+  startCommand = "npm install && npm run build && npm start"
+  restartPolicyType = "never"
+
 [environments.production]
   variables = {}
