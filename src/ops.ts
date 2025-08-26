@@ -28,21 +28,9 @@ export function startOpsSelfChecks() {
 }
 
 export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolean}> {
-  // For local health check, don't call external URL to avoid circular dependency  
-  let appOk = true, ibkrOk = false; // Assume app is OK if we can execute this function
-  
-  // Only check external health if we have a different URL than ourselves
-  const appUrl = process.env.APP_URL;
-  const isExternalCheck = appUrl && !appUrl.includes('localhost') && appUrl !== process.env.INTERNAL_URL;
-  
-  if (isExternalCheck) {
-    try {
-      const r = await axios.get(`${appUrl}/healthz`, { timeout: 3000 }); // Use legacy endpoint for external check
-      appOk = r.status === 200;
-    } catch {
-      appOk = false; // External service is down
-    }
-  }
+  // For internal health check, assume app is OK if we can execute this function
+  // This prevents circular dependency issues with external health checks
+  let appOk = true, ibkrOk = false;
   try {
     const base = process.env.IBKR_BASE_URL;
     if (base) {
@@ -99,13 +87,27 @@ export async function runFullSystemCheck() {
     results.push('❌ Telegram: Failed');
   }
   
-  // 2. Test Gemini API
+  // 2. Test Gemini AI
   try {
     const { analyzePost } = await import('./llm.js');
-    const test = await analyzePost('Test analysis');
+    const test = await analyzePost('System test');
     results.push('✅ Gemini AI: Connected');
+    
+    // Update monitoring status
+    try {
+      const { getMonitor } = await import('./monitoring.js');
+      const monitor = getMonitor();
+      monitor.setConnectionStatus('gemini', true);
+    } catch {}
   } catch (e: any) {
     results.push(`❌ Gemini AI: ${e?.message || 'Failed'}`);
+    
+    // Update monitoring status
+    try {
+      const { getMonitor } = await import('./monitoring.js');
+      const monitor = getMonitor();
+      monitor.setConnectionStatus('gemini', false);
+    } catch {}
   }
   
   // 3. Test Health endpoint
