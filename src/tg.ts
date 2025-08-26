@@ -23,6 +23,7 @@ export function sendText(text: string) {
 export async function sendTrumpAlert(args: { 
   summary: string; 
   tickers: string[]; 
+  tickerAnalysis?: Array<{symbol: string; impact: 'positive' | 'negative'; reason: string}>;
   url: string; 
   originalPost?: string; 
   timestamp?: Date;
@@ -39,12 +40,26 @@ export async function sendTrumpAlert(args: {
   const relevanceScore = args.relevanceScore || 5;
   const totalDelayMs = args.totalDelayMs || (alertTime.getTime() - originalPostTime.getTime());
   
-  // Build inline keyboard with Call/Put buttons for each ticker
+  // Build inline keyboard with smart Call/Put buttons for each ticker
   const kb = new InlineKeyboard();
   
-  for (const t of args.tickers.slice(0, 6)) { // Support up to 6 tickers
-    kb.text(`🟢 Buy Call ${t}`, JSON.stringify({ a: 'buy_call', t }));
-    kb.text(`🔴 Buy Put ${t}`, JSON.stringify({ a: 'buy_put', t })).row();
+  // Use ticker analysis if available for smart button ordering
+  const tickerData = args.tickerAnalysis || args.tickers.slice(0, 6).map(t => ({symbol: t, impact: 'neutral' as const, reason: 'Market impact'}));
+  
+  for (const ticker of tickerData.slice(0, 6)) { // Support up to 6 tickers
+    if (ticker.impact === 'positive') {
+      // For bullish tickers: Call button first (recommended)
+      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
+      kb.text(`🔴 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
+    } else if (ticker.impact === 'negative') {
+      // For bearish tickers: Put button first (recommended)
+      kb.text(`🔴 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol }));
+      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol })).row();
+    } else {
+      // Neutral or legacy format: default order
+      kb.text(`🟢 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
+      kb.text(`🔴 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
+    }
   }
   
   // Add manual trading button and preview button
@@ -104,9 +119,24 @@ export async function sendTrumpAlert(args: {
   // Add analysis summary
   message += `🧠 <b>Market Impact Analysis:</b>\n${args.summary}\n\n`;
   
-  // Add relevant tickers with relevance indicator
+  // Add enhanced ticker analysis or fallback to simple list
   const relevanceEmoji = relevanceScore >= 8 ? '🎯' : relevanceScore >= 6 ? '🟢' : '🟡';
-  message += `📊 <b>Trading Opportunities:</b> <code>${args.tickers.join(' | ')}</code> ${relevanceEmoji}${relevanceScore}/10\n\n`;
+  message += `📊 <b>Trading Opportunities:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
+  
+  if (args.tickerAnalysis && args.tickerAnalysis.length > 0) {
+    // NEW FORMAT: Individual ticker impact analysis
+    for (const ticker of args.tickerAnalysis) {
+      const impactEmoji = ticker.impact === 'positive' ? '📈' : '📉';
+      const impactText = ticker.impact === 'positive' ? 'BULLISH' : 'BEARISH';
+      const impactColor = ticker.impact === 'positive' ? '🟢' : '🔴';
+      
+      message += `${impactColor} <b>${ticker.symbol}</b> - ${impactEmoji} <b>${impactText}</b>\n`;
+      message += `   💬 <i>${ticker.reason}</i>\n\n`;
+    }
+  } else {
+    // LEGACY FORMAT: Simple ticker list
+    message += `<code>${args.tickers.join(' | ')}</code>\n\n`;
+  }
   
   // Add direct link text for backup
   message += `🔗 <a href="${args.url}">Direct Link to Truth Social Post</a>`;

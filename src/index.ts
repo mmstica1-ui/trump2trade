@@ -93,6 +93,7 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   await sendTrumpAlert({ 
     summary: finalSummary, 
     tickers: finalTickers, 
+    tickerAnalysis: tickerAnalysis, // Pass the new ticker analysis format
     url,
     originalPost: text || postText,
     relevanceScore

@@ -186,12 +186,21 @@ class SystemMonitor {
       if (global.gc) {
         global.gc();
         log.info('Forced garbage collection due to high memory usage');
+        
+        // Check memory again after GC
+        const newMemUsage = process.memoryUsage();
+        const newMemPercentage = (newMemUsage.heapUsed / newMemUsage.heapTotal) * 100;
+        log.info(`Memory after GC: ${Math.round(newMemPercentage)}%`);
       }
+      
+      // Clear old errors to free memory
+      this.cleanupOldErrors();
       
       await this.sendWarningAlert(
         `🧠 High Memory Usage: ${Math.round(memPercentage)}%\n\n` +
         `Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(1)}MB\n` +
-        `Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(1)}MB`
+        `Heap Total: ${(memUsage.heapTotal / 1024 / 1024).toFixed(1)}MB\n` +
+        `${global.gc ? '♻️ Garbage collection forced' : '⚠️ GC not available'}`
       );
     }
   }

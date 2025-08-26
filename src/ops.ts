@@ -117,7 +117,7 @@ export async function runFullSystemCheck() {
     results.push(`❌ Health Check: ${e?.message || 'Failed'}`);
   }
   
-  // 4. Test webhook endpoints
+  // 4. Test webhook endpoints  
   try {
     const appUrl = process.env.APP_URL || 'https://web-production-918d1.up.railway.app';
     const apifyUrl = `${appUrl}/webhook/apify`;
