@@ -1,17 +1,34 @@
-# Build
-FROM node:20-slim AS build
+# ---- build stage ----
+FROM node:18-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm i || true
-COPY . .
-RUN npm run build
 
-# Runtime
-FROM node:20-slim
+# התקנות מהירות עם cache
+COPY package*.json ./
+RUN npm ci
+
+# קוד המקור
+COPY . ./
+
+# קומפילציה ל-TS -> JS לתיקיית dist
+RUN npx tsc -p tsconfig.json
+
+# ---- runtime stage ----
+FROM node:18-alpine AS runtime
 WORKDIR /app
-ENV NODE_ENV=production
-COPY --from=build /app/package.json ./
-COPY --from=build /app/node_modules ./node_modules
+
+# רק מה שצריך להרצה (תלויות פרוד)
+COPY package*.json ./
+RUN npm ci --omit=dev
+
+# נעתיק את הקוד המתורגם
 COPY --from=build /app/dist ./dist
+
+# אם יש assets/קבצי env נחוצים בזמן ריצה הוסף כאן COPY נוספים
+
+ENV NODE_ENV=production
+# Railway מספק PORT; ודא שהשרת מאזין אליו
+ENV PORT=8080
 EXPOSE 8080
-CMD ["node","dist/index.js"]
+
+# נקודת ההפעלה
+CMD ["node", "dist/index.js"]
