@@ -141,6 +141,21 @@ export async function sendTrumpAlert(args: {
   // Add direct link text for backup
   message += `🔗 <a href="${args.url}">Direct Link to Truth Social Post</a>`;
 
+  // Add to daily analytics
+  try {
+    const { getDailyAnalytics } = await import('./daily-analytics.js');
+    const analytics = getDailyAnalytics();
+    analytics.addPost({
+      originalPost: args.originalPost || 'Post content unavailable',
+      tickers: args.tickers,
+      relevanceScore: relevanceScore,
+      processingTimeMs: totalDelayMs,
+      url: args.url
+    });
+  } catch (analyticsError: any) {
+    console.warn('Failed to add post to daily analytics:', analyticsError?.message || analyticsError);
+  }
+
   return bot.api.sendMessage(chatId, message, { 
     parse_mode: 'HTML', 
     reply_markup: kb,
@@ -148,7 +163,7 @@ export async function sendTrumpAlert(args: {
   });
 }
 
-bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /health, /monitor, /safe_mode on|off, /system on|off, /check'));
+bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /health, /monitor, /daily, /analytics, /safe_mode on|off, /system on|off, /check'));
 bot.command('ping', ctx => ctx.reply('pong'));
 
 bot.on('callback_query:data', async ctx => {
@@ -264,6 +279,44 @@ bot.command('monitor', async (ctx) => {
     await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error) {
     await ctx.reply(`❌ Monitor check failed: ${error}`);
+  }
+});
+
+// Daily analytics commands
+bot.command('daily', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const { getDailyAnalytics } = await import('./daily-analytics.js');
+    const analytics = getDailyAnalytics();
+    await analytics.triggerDailyReport();
+  } catch (error: any) {
+    await ctx.reply(`❌ Daily report failed: ${error?.message || error}`);
+  }
+});
+
+bot.command('analytics', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const args = (ctx.message?.text || '').split(' ');
+    const dateArg = args[1]; // Optional date in YYYY-MM-DD format
+    
+    const { getDailyAnalytics } = await import('./daily-analytics.js');
+    const analytics = getDailyAnalytics();
+    
+    if (dateArg && dateArg.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      await analytics.triggerDailyReport(dateArg);
+    } else {
+      const today = new Date().toISOString().split('T')[0];
+      const todayData = analytics.getAnalytics(today);
+      
+      if (!todayData || todayData.totalPosts === 0) {
+        await ctx.reply('📊 No posts today yet. System is monitoring for Trump posts...\n\nUse /analytics YYYY-MM-DD for specific date');
+      } else {
+        await analytics.triggerDailyReport();
+      }
+    }
+  } catch (error: any) {
+    await ctx.reply(`❌ Analytics failed: ${error?.message || error}`);
   }
 });
 

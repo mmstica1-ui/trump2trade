@@ -2,6 +2,7 @@ import 'dotenv/config';
 import express from 'express';
 import pino from 'pino';
 import { initializeMonitoring, getHealthEndpointData } from './monitoring.js';
+import { initializeDailyAnalytics } from './daily-analytics.js';
 
 // Environment validation
 const requiredEnvVars = {
@@ -130,6 +131,10 @@ app.listen(PORT, async () => {
   
   // Initialize monitoring system FIRST
   const monitor = initializeMonitoring(process.env.TELEGRAM_ADMIN_CHAT_ID || process.env.TELEGRAM_CHAT_ID);
+  
+  // Initialize daily analytics system
+  initializeDailyAnalytics();
+  log.info('Daily analytics system initialized');
   
   bot.start();
   monitor.setConnectionStatus('telegram', true);
