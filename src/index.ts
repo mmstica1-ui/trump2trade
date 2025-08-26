@@ -28,7 +28,12 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   const { analyzePost } = await import('./llm.js');
   const { sendTrumpAlert } = await import('./tg.js');
   const analysis = await analyzePost(text);
-  await sendTrumpAlert({ summary: analysis.summary, tickers: analysis.tickers, url });
+  await sendTrumpAlert({ 
+    summary: analysis.summary, 
+    tickers: analysis.tickers, 
+    url,
+    originalPost: text 
+  });
   res.json({ ok: true });
 });
 

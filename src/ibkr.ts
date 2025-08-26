@@ -8,13 +8,17 @@ const qty = Number(process.env.IBKR_ORDER_DEFAULT_QTY || '1');
 const tif = process.env.IBKR_ORDER_TIF || 'DAY';
 const outsideRTH = /^true$/i.test(process.env.IBKR_OUTSIDE_RTH || 'false');
 
-export type InlineTradePayload = { a: 'buy_call'|'buy_put'|'sell_call'|'sell_put'|'preview'; t?: string };
+export type InlineTradePayload = { a: 'buy_call'|'buy_put'|'sell_call'|'sell_put'|'preview'|'manual_trade'; t?: string };
 
 export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   if ((process.env.DISABLE_TRADES || '').toLowerCase() === 'true') {
     return '🧪 Preview mode is ON (DISABLE_TRADES=true). No orders will be sent.';
   }
   if (p.a === 'preview') return 'No trade. This is a dry run.';
+  if (p.a === 'manual_trade') {
+    const manualTradingUrl = process.env.MANUAL_TRADING_URL || 'https://your-trading-platform.com';
+    return `📈 Manual Trading: ${manualTradingUrl}\n\n🎯 Use this link to execute trades manually on your preferred platform.`;
+  }
   if (!p.t) throw new Error('Missing ticker');
 
   const underlying = await searchUnderlying(p.t);

@@ -19,16 +19,43 @@ export function sendText(text: string) {
   });
 }
 
-export async function sendTrumpAlert(args: { summary: string; tickers: string[]; url: string }) {
+export async function sendTrumpAlert(args: { summary: string; tickers: string[]; url: string; originalPost?: string }) {
+  // Build inline keyboard with Call/Put buttons for each ticker
   const kb = new InlineKeyboard();
-  for (const t of args.tickers.slice(0, 4)) {
-    // Only Buy Call and Buy Put buttons
+  
+  for (const t of args.tickers.slice(0, 6)) { // Support up to 6 tickers
     kb.text(`🟢 Buy Call ${t}`, JSON.stringify({ a: 'buy_call', t }));
     kb.text(`🔴 Buy Put ${t}`, JSON.stringify({ a: 'buy_put', t })).row();
   }
+  
+  // Add manual trading button and preview button
+  kb.text('📈 Manual Trading', JSON.stringify({ a: 'manual_trade' }));
   kb.text('🧪 Preview (no trade)', JSON.stringify({ a: 'preview' })).row();
 
-  return bot.api.sendMessage(chatId, `🦅 <b>Trump post → trade idea</b>\n\n<b>Summary:</b> ${args.summary}\n<b>Tickers:</b> ${args.tickers.join(', ')}\n\n<code>${args.url}</code>`, { parse_mode: 'HTML', reply_markup: kb });
+  // Build comprehensive message
+  let message = `🦅 <b>Trump Post → Trade Alert</b>\n\n`;
+  
+  // Add original post if provided
+  if (args.originalPost) {
+    const truncatedPost = args.originalPost.length > 200 
+      ? args.originalPost.substring(0, 200) + '...' 
+      : args.originalPost;
+    message += `📝 <b>Original Post:</b>\n<i>"${truncatedPost}"</i>\n\n`;
+  }
+  
+  // Add analysis summary
+  message += `🧠 <b>AI Analysis:</b>\n${args.summary}\n\n`;
+  
+  // Add relevant tickers
+  message += `📊 <b>Relevant Tickers:</b> ${args.tickers.join(', ')}\n\n`;
+  
+  // Add source link
+  message += `🔗 <b>Source:</b> <a href="${args.url}">Truth Social Post</a>`;
+
+  return bot.api.sendMessage(chatId, message, { 
+    parse_mode: 'HTML', 
+    reply_markup: kb
+  });
 }
 
 bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /safe_mode on|off, /system on|off, /check'));
