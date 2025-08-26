@@ -152,13 +152,13 @@ class SystemMonitor {
     
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
     
-    // Determine status with more forgiving memory thresholds
+    // Determine status with realistic memory thresholds for our system
     const recentCriticalErrors = this.recentErrors.filter(e => 
       Date.now() - e.timestamp.getTime() < 5 * 60 * 1000).length;
     
     if (memPercentage > 98 || recentCriticalErrors > 10) {
       status = 'critical';
-    } else if (memPercentage > 85 || 
+    } else if (memPercentage > 95 || 
                !this.connections.telegram ||
                recentCriticalErrors > 3 ||
                (this.lastPostTime && Date.now() - this.lastPostTime.getTime() > 60 * 60 * 1000)) {
@@ -184,8 +184,8 @@ class SystemMonitor {
     const memUsage = process.memoryUsage();
     const memPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
     
-    // Aggressive memory management
-    if (memPercentage > 80) {
+    // Memory management with realistic thresholds 
+    if (memPercentage > 95) {
       // Clear old errors first to free memory
       this.cleanupOldErrors();
       
@@ -209,8 +209,8 @@ class SystemMonitor {
           );
         }
       } else {
-        // No GC available, send warning at lower threshold
-        if (memPercentage > 90) {
+        // No GC available, send warning at higher threshold
+        if (memPercentage > 97) {
           await this.sendWarningAlert(
             `🧠 High Memory Usage: ${Math.round(memPercentage)}%\n\n` +
             `Heap Used: ${(memUsage.heapUsed / 1024 / 1024).toFixed(1)}MB\n` +
