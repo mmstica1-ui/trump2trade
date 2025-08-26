@@ -28,12 +28,12 @@ export function startOpsSelfChecks() {
 }
 
 export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolean}> {
-  const appUrl = process.env.APP_URL || '';
+  const appUrl = process.env.APP_URL || 'https://web-production-918d1.up.railway.app';
   let appOk = false, ibkrOk = false;
   try {
     if (appUrl) {
-      const r = await axios.get(`${appUrl}/healthz`, { timeout: 5000 });
-      appOk = !!r.data?.ok;
+      const r = await axios.get(`${appUrl}/health`, { timeout: 5000 });
+      appOk = !!r.data?.ok || r.status === 200;
     } else { appOk = true; }
   } catch {}
   try {
@@ -104,7 +104,7 @@ export async function runFullSystemCheck() {
   // 3. Test Health endpoint
   try {
     const snap = await getHealthSnapshot();
-    results.push(`✅ Health: App ${snap.appOk ? 'OK' : 'FAIL'}`);
+    results.push(`${snap.appOk ? '✅' : '❌'} Health: App ${snap.appOk ? 'OK' : 'FAIL'}`);
     
     // Only test IBKR if trades enabled
     const tradesEnabled = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true';

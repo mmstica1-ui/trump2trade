@@ -62,16 +62,40 @@ app.get('/webhook/genspark', (_: express.Request, res: express.Response) =>
 
 // dev helper: inject a fake post
 app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
-  const { text = 'Tariffs removed on chips from China', url = 'https://truth.social/mock' } = req.body || {};
-  const { analyzePost } = await import('./llm.js');
+  const { 
+    postText = 'Tariffs removed on chips from China', 
+    text = postText, // backward compatibility
+    url = 'https://truth.social/mock',
+    summary,
+    tickerAnalysis,
+    tickers,
+    relevanceScore = 5
+  } = req.body || {};
+  
   const { sendTrumpAlert } = await import('./tg.js');
-  const analysis = await analyzePost(text);
+  
+  // Support new ticker analysis format or fall back to legacy
+  let finalTickers = tickers || [];
+  let finalSummary = summary || 'Market impact analysis of Trump post';
+  
+  if (tickerAnalysis && Array.isArray(tickerAnalysis)) {
+    // New format with ticker analysis
+    finalTickers = tickerAnalysis.map((t: any) => t.symbol);
+    finalSummary = summary || 'Enhanced ticker impact analysis';
+  } else if (text || postText) {
+    // Legacy format - analyze the post
+    const { analyzePost } = await import('./llm.js');
+    const analysis = await analyzePost(text || postText);
+    finalTickers = analysis.tickers;
+    finalSummary = analysis.summary;
+  }
+  
   await sendTrumpAlert({ 
-    summary: analysis.summary, 
-    tickers: analysis.tickers, 
+    summary: finalSummary, 
+    tickers: finalTickers, 
     url,
-    originalPost: text,
-    relevanceScore: analysis.relevanceScore
+    originalPost: text || postText,
+    relevanceScore
   });
   res.json({ ok: true });
 });
@@ -139,7 +163,6 @@ app.listen(PORT, async () => {
       // Send admin startup notification
       if (isProduction) {
         try {
-          const monitor = initializeMonitoring();
           await monitor.sendWarningAlert(`🚀 Trump2Trade Production Started\n\nFeatures: ${features.join(', ')}\nUptime monitoring active`);
         } catch (err) {
           log.warn('Failed to send admin startup notification');
