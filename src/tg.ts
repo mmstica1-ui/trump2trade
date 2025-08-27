@@ -110,39 +110,84 @@ export async function sendTrumpAlert(args: {
   const discoveryDelayMs = postDiscoveredAt.getTime() - originalPostTime.getTime();
   const processingDelayMs = alertTime.getTime() - postDiscoveredAt.getTime();
   
-  // Simple and clean English message format
-  let message = `🦅 <b>Trump Trading Alert</b>\n\n`;
+  // Build comprehensive message with PRECISE timing and professional design (restored full format)
+  let message = `🦅 <b>Trump Alert • INSTANT</b>\n`;
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   
-  // Show original post content
+  // Show timing with professional formatting
+  message += `🕐 <b>Original Post:</b> ${originalPostTime.toLocaleString('en-US', { 
+    timeZone: 'UTC',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })} UTC\n`;
+  
+  message += `⚡ <b>Alert Time:</b> ${alertTime.toLocaleString('en-US', { 
+    timeZone: 'UTC', 
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })} UTC\n`;
+  
+  // Professional delay indication with clearer icons
+  const totalDelaySeconds = Math.round(totalDelayMs / 1000);
+  let delayIcon = '🚀'; // Ultra fast
+  if (totalDelaySeconds > 5) delayIcon = '⚡'; // Fast
+  if (totalDelaySeconds > 15) delayIcon = '⏱️'; // Medium
+  if (totalDelaySeconds > 30) delayIcon = '⚠️'; // Slow
+  
+  message += `${delayIcon} <b>Processing Time:</b> ${totalDelaySeconds} seconds\n`;
+  
+  // Technical breakdown with clear separation
+  const breakdownParts = [];
+  if (discoveryDelayMs > 1000) {
+    breakdownParts.push(`🔍 Discovery: ${Math.round(discoveryDelayMs/1000)}s`);
+  }
+  if (analysisTimeMs > 0) {
+    breakdownParts.push(`🧠 Analysis: ${Math.round(analysisTimeMs/1000)}s`);
+  }
+  breakdownParts.push(`📡 Delivery: ${Math.round(processingDelayMs/1000)}s`);
+  
+  if (breakdownParts.length > 0) {
+    message += `📊 <b>Breakdown:</b> ${breakdownParts.join(' • ')}\n`;
+  }
+  message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
+  
+  // Original post with better formatting
   if (args.originalPost) {
-    const truncatedPost = args.originalPost.length > 150 
-      ? args.originalPost.substring(0, 150) + '...' 
+    const truncatedPost = args.originalPost.length > 200 
+      ? args.originalPost.substring(0, 200) + '...' 
       : args.originalPost;
-    message += `📝 <b>Trump Post:</b>\n`;
-    message += `<i>"${truncatedPost}"</i>\n\n`;
+    message += `📄 <b>Original Trump Post:</b>\n`;
+    message += `${truncatedPost}\n\n`;
   }
   
-  // Market analysis
-  message += `📈 <b>Market Analysis:</b>\n`;
+  // Analysis with professional presentation
+  message += `📈 <b>Market Impact Analysis:</b>\n`;
   message += `${args.summary}\n\n`;
   
-  // Trading signals
+  // Trading opportunities section
+  const relevanceEmoji = relevanceScore >= 8 ? '🎯' : relevanceScore >= 6 ? '🟢' : '🟡';
+  message += `💰 <b>Trading Opportunities:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
+  
   if (args.tickerAnalysis && args.tickerAnalysis.length > 0) {
-    message += `🎯 <b>Trading Signals:</b>\n`;
+    // Enhanced ticker format with professional icons
     for (const ticker of args.tickerAnalysis) {
-      const signal = ticker.impact === 'positive' ? '🟢 BULLISH' : '🔴 BEARISH';
-      message += `• <b>${ticker.symbol}</b> ${signal} - ${ticker.reason}\n`;
+      const impactEmoji = ticker.impact === 'positive' ? '📈' : '📉';
+      const impactText = ticker.impact === 'positive' ? 'BULLISH' : 'BEARISH';
+      const impactColor = ticker.impact === 'positive' ? '🟢' : '🔴';
+      
+      message += `${impactColor} <b>${ticker.symbol}</b> • ${impactEmoji} ${impactText}\n`;
+      message += `    💭 ${ticker.reason}\n\n`;
     }
   } else {
-    message += `🎯 <b>Tickers:</b> ${args.tickers.join(', ')}\n`;
+    // Fallback format with better styling
+    message += `📊 <code>${args.tickers.join(' • ')}</code>\n\n`;
   }
   
-  // Relevance score
-  const scoreEmoji = relevanceScore >= 8 ? '🔥' : relevanceScore >= 6 ? '⭐' : '📊';
-  message += `\n${scoreEmoji} <b>Impact Score:</b> ${relevanceScore}/10\n\n`;
-  
-  // Link
-  message += `🔗 <a href="${args.url}">View Original Post</a>`;
+  // Link with professional styling
+  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  message += `🔗 <a href="${args.url}">View Original Post on Truth Social</a>`;
 
   // Add to daily analytics
   try {
