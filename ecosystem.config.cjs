@@ -23,14 +23,14 @@ module.exports = {
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
-      // IBKR Trading Configuration (Need real Gateway setup)
-      IBKR_BASE_URL: 'http://localhost:5000',  // Will need real Gateway
+      // IBKR Trading Configuration - Railway Cloud Gateway
+      IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
       IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
-      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/portal.proxy/v1/portal/',
-      IBKR_GATEWAY_MODE: 'SIMULATION',  // SIMULATION or REAL
+      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
+      IBKR_GATEWAY_MODE: 'REAL',  // Using Railway Gateway
       // Safety
       DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',
@@ -54,14 +54,14 @@ module.exports = {
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
-      // IBKR Trading Configuration (Need real Gateway setup)
-      IBKR_BASE_URL: 'http://localhost:5000',  // Will need real Gateway
+      // IBKR Trading Configuration - Railway Cloud Gateway
+      IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
       IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
-      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/portal.proxy/v1/portal/',
-      IBKR_GATEWAY_MODE: 'SIMULATION',  // SIMULATION or REAL
+      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
+      IBKR_GATEWAY_MODE: 'REAL',  // Using Railway Gateway
       // Safety
       DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',

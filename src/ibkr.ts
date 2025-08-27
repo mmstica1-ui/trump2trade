@@ -110,13 +110,32 @@ async function placeMarketOptionOrder(optionConid: number, side: 'BUY'|'SELL') {
 
 async function isIbkrGatewayRunning(): Promise<boolean> {
   try {
-    const r = await axios.get(`${base}/iserver/auth/status`, { 
+    // First check if the Railway server is running
+    const healthCheck = await axios.get(`${base}/health`, { 
       httpsAgent: new https.Agent({ rejectUnauthorized: false }),
       timeout: 5000
     });
-    return r.status === 200 && r.data?.authenticated === true;
+    
+    if (healthCheck.status === 200) {
+      console.log(`✅ Railway IBKR server is running: ${healthCheck.data?.status}`);
+      
+      // Try to check IBKR auth status
+      try {
+        const authCheck = await axios.get(`${base}/iserver/auth/status`, { 
+          httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+          timeout: 5000
+        });
+        return authCheck.status === 200 && authCheck.data?.authenticated === true;
+      } catch (authError: any) {
+        console.log(`🔧 IBKR Gateway not fully configured on Railway server: ${authError.message}`);
+        // Server is running but IBKR not configured - still use simulation
+        return false;
+      }
+    }
+    
+    return false;
   } catch (error: any) {
-    console.log(`❌ IBKR Gateway not accessible: ${error.message}`);
+    console.log(`❌ Railway server not accessible: ${error.message}`);
     return false;
   }
 }
@@ -135,7 +154,7 @@ function simulateIbkrTrade(p: InlineTradePayload): string {
   const mockExpiry = getNextFriday();
   const mockOrderId = `SIM${Date.now()}`;
   
-  return `🧪 <b>SIMULATION MODE</b>
+  return `🧪 <b>RAILWAY SIMULATION MODE</b>
   
 ✅ ${side} ${type} ${p.t} ${mockExpiry} $${mockStrike} x${qty}
 📊 Estimated Price: $${mockPrice.toFixed(2)}
@@ -143,13 +162,16 @@ function simulateIbkrTrade(p: InlineTradePayload): string {
 📅 Expiry: ${mockExpiry}
 🆔 Order ID: ${mockOrderId}
 
-⚠️ <b>This is a simulated trade!</b>
-🔧 To enable real trading:
-• Set up IBKR Gateway properly
-• Change IBKR_GATEWAY_MODE to 'REAL'
-• Ensure Gateway is authenticated
+🌐 <b>Railway Server Status:</b> ✅ Running
+🔧 <b>IBKR Gateway:</b> ❌ Not authenticated
 
-💡 Manual Trading: ${process.env.MANUAL_TRADING_URL}`;
+⚠️ <b>Next Steps to Enable Real Trading:</b>
+• Configure IBKR credentials in Railway
+• Complete IBKR Gateway authentication
+• Test connection with paper trading
+
+💡 Manual Trading: ${process.env.MANUAL_TRADING_URL}
+🌐 Server Health: ${base}/health`;
 }
 
 function getNextFriday(): string {
