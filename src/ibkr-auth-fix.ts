@@ -101,11 +101,11 @@ export class IBKRAuthManager {
   }
 
   async getBalance(): Promise<any> {
-    return this.makeAuthenticatedRequest(`/v1/api/portfolio/${this.accountId}/summary`);
+    return this.makeAuthenticatedRequest(`/v1/api/iserver/account/${this.accountId}/summary`);
   }
 
   async getPositions(): Promise<any> {
-    return this.makeAuthenticatedRequest(`/v1/api/portfolio/${this.accountId}/positions/0`);
+    return this.makeAuthenticatedRequest(`/v1/api/iserver/account/${this.accountId}/positions/0`);
   }
 }
 
