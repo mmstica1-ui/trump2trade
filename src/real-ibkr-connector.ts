@@ -22,22 +22,35 @@ export class RealIBKRConnector {
       return this.authToken;
     }
 
+    console.log(`🔐 Authenticating with server: ${this.baseUrl}`);
+    console.log(`📋 Credentials: ${this.username} / ${this.mode} mode`);
+    
     // Get new token from your server
+    const authPayload = {
+      username: this.username,
+      password: this.password,
+      trading_mode: this.mode
+    };
+    
+    console.log('🔍 Auth payload:', JSON.stringify(authPayload));
+    
     const authResponse = await fetch(`${this.baseUrl}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        username: this.username,
-        password: this.password,
-        trading_mode: this.mode
-      })
+      body: JSON.stringify(authPayload)
     });
 
+    console.log(`📊 Auth response status: ${authResponse.status}`);
+    
     if (!authResponse.ok) {
-      throw new Error(`Authentication failed: ${authResponse.status}`);
+      const errorText = await authResponse.text();
+      console.error(`❌ Auth failed: ${authResponse.status} - ${errorText}`);
+      throw new Error(`Authentication failed: ${authResponse.status} - ${errorText}`);
     }
 
     const authData = await authResponse.json();
+    console.log('✅ Auth success:', authData);
+    
     this.authToken = authData.api_token;
     // Token expires in 1 hour, refresh 5 minutes before
     this.tokenExpiry = Date.now() + (55 * 60 * 1000);
