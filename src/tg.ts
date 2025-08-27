@@ -8,6 +8,26 @@ const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
 const chatId = process.env.TELEGRAM_CHAT_ID!;
 
+// Helper function to get IBKR authentication token
+async function getIBKRAuthToken(baseUrl: string): Promise<string> {
+  const authResponse = await fetch(`${baseUrl}/auth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      username: "demo_user",
+      password: "demo_password", 
+      trading_mode: "paper"
+    })
+  });
+  
+  if (!authResponse.ok) {
+    throw new Error(`Authentication failed: ${authResponse.status}`);
+  }
+  
+  const authData = await authResponse.json();
+  return authData.api_token;
+}
+
 // Support multiple chat IDs for both personal chat and group
 function getAllChatIds(): string[] {
   const chatIds = [chatId]; // Always include the main chat
@@ -501,53 +521,56 @@ bot.command('ibkr_account', async (ctx) => {
     const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
     
     try {
-      // Try Railway health endpoint for account info
-      const healthResponse = await fetch(`${baseUrl}/health`);
-      const healthData = await healthResponse.json();
+      // Get authentication token
+      const token = await getIBKRAuthToken(baseUrl);
       
-      let accountResponse = await fetch(`${baseUrl}/config`, {
+      // Get configuration info for account details
+      const configResponse = await fetch(`${baseUrl}/config`, {
         method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
       });
       
-      // Fallback to standard IBKR endpoint
-      if (!accountResponse.ok) {
-        accountResponse = await fetch(`${baseUrl}/iserver/accounts`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-      
-      if (accountResponse.ok) {
-        const accountData = await accountResponse.json();
+      if (configResponse.ok) {
+        const configData = await configResponse.json();
         const message = `👤 <b>IBKR Account Info</b>
 
-✅ <b>Connected Accounts:</b>
-${Array.isArray(accountData) ? accountData.map((acc: any) => 
-  `• ${acc.accountId || acc.id || 'Unknown'} (${acc.accountTitle || acc.title || 'Paper Trading'})`
-).join('\n') : 'No account data available'}
+✅ <b>Server Status:</b>
+• Environment: ${configData.environment || 'Unknown'}
+• Trading Mode: ${configData.trading_mode || 'Unknown'} 
+• IBKR Connected: ${configData.ibkr_connected ? '✅' : '❌'}
+• Ready for Trading: ${configData.ready_for_trading ? '✅' : '❌'}
 
 🔧 <b>Configured Account:</b>
 ${process.env.IBKR_ACCOUNT_ID || 'Not configured'}
 
-📊 <b>Status:</b>
-Gateway: ${accountData.length ? '✅ Connected' : '⚠️ No accounts found'}`;
+💼 <b>Trading Capabilities:</b>
+${Array.isArray(configData.trading_capabilities) ? 
+  configData.trading_capabilities.map((cap: string) => `• ${cap}`).join('\n') : 
+  '• Standard trading functions'}
+
+📊 <b>Available Endpoints:</b>
+${Array.isArray(configData.endpoints) ? 
+  configData.endpoints.filter((ep: string) => ep.includes('trading')).map((ep: string) => `• ${ep}`).join('\n') : 
+  'Standard endpoints'}`;
         
         await ctx.reply(message, { parse_mode: 'HTML' });
       } else {
-        throw new Error(`HTTP ${accountResponse.status}`);
+        throw new Error(`Config fetch failed: ${configResponse.status}`);
       }
     } catch (apiError: any) {
       const message = `👤 <b>IBKR Account Info</b>
 
 ❌ <b>Connection Failed:</b>
 Error: ${apiError.message || 'Unknown error'}
-Endpoint: ${baseUrl}/iserver/accounts
+Endpoint: ${baseUrl}/config
 
 🔧 <b>Possible Issues:</b>
-• IBKR Gateway not fully started
-• Authentication required
-• Network connectivity issues
+• IBKR Gateway authentication failed
+• Server configuration issue
+• Network connectivity problems
 
 💡 <b>Try:</b> /ibkr_connect to reconnect`;
       
@@ -565,56 +588,58 @@ bot.command('ibkr_positions', async (ctx) => {
     const accountId = process.env.IBKR_ACCOUNT_ID || 'DU1234567';
     
     try {
-      // Try custom trading positions endpoint
-      let positionsResponse = await fetch(`${baseUrl}/trading/positions`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
+      // Get authentication token
+      const token = await getIBKRAuthToken(baseUrl);
       
-      // Fallback to standard IBKR endpoint
-      if (!positionsResponse.ok) {
-        positionsResponse = await fetch(`${baseUrl}/iserver/account/${accountId}/positions/0`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+      // Get positions using authenticated endpoint
+      const positionsResponse = await fetch(`${baseUrl}/trading/positions`, {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
       
       if (positionsResponse.ok) {
         const positionsData = await positionsResponse.json();
         
         let message = `📊 <b>Current Positions</b>\n\n`;
         
-        if (Array.isArray(positionsData) && positionsData.length > 0) {
-          message += `✅ <b>Active Positions (${positionsData.length}):</b>\n`;
-          positionsData.forEach((pos: any, index: number) => {
-            message += `\n${index + 1}. <b>${pos.ticker || pos.symbol || 'Unknown'}</b>\n`;
-            message += `   Quantity: ${pos.position || 0}\n`;
-            message += `   Market Price: $${pos.marketPrice || 'N/A'}\n`;
-            message += `   Market Value: $${pos.marketValue || 'N/A'}\n`;
-            message += `   P&L: ${pos.unrealizedPnl || 'N/A'}\n`;
+        if (positionsData.success && positionsData.total_positions > 0) {
+          message += `✅ <b>Active Positions (${positionsData.total_positions}):</b>\n`;
+          
+          // Display positions from the positions object
+          const positions = positionsData.positions || {};
+          Object.entries(positions).forEach(([symbol, pos]: [string, any], index: number) => {
+            message += `\n${index + 1}. <b>${symbol}</b>\n`;
+            message += `   Quantity: ${pos.quantity || 0}\n`;
+            message += `   Market Price: $${pos.market_price || 'N/A'}\n`;
+            message += `   Market Value: $${pos.market_value || 'N/A'}\n`;
+            message += `   P&L: ${pos.unrealized_pnl || 'N/A'}\n`;
           });
         } else {
           message += `📈 <b>No open positions</b>\n\n✅ Account ready for trading\n💡 All positions closed or no trades executed yet`;
         }
         
-        message += `\n\n🏦 <b>Account:</b> ${accountId}\n📅 <b>Updated:</b> ${new Date().toLocaleTimeString()}`;
+        message += `\n\n🏦 <b>Account:</b> ${accountId}\n`;
+        message += `📊 <b>Trading Mode:</b> ${positionsData.trading_mode || 'paper'}\n`;
+        message += `📅 <b>Updated:</b> ${new Date().toLocaleTimeString()}`;
         
         await ctx.reply(message, { parse_mode: 'HTML' });
       } else {
-        throw new Error(`HTTP ${positionsResponse.status} - ${positionsResponse.statusText}`);
+        throw new Error(`Positions fetch failed: ${positionsResponse.status}`);
       }
     } catch (apiError: any) {
       const message = `📊 <b>Current Positions</b>
 
 ❌ <b>Unable to fetch positions:</b>
 Error: ${apiError.message}
-Account: ${accountId}
-Endpoint: ${baseUrl}/iserver/account/${accountId}/positions/0
+Endpoint: ${baseUrl}/trading/positions
 
 🔧 <b>Troubleshooting:</b>
 • Check IBKR Gateway authentication
-• Verify account ID is correct
-• Ensure Gateway is connected
+• Verify server connection
+• Ensure trading mode is active
 
 💡 Try: /ibkr_status for connection details`;
       
@@ -632,78 +657,57 @@ bot.command('ibkr_balance', async (ctx) => {
     const accountId = process.env.IBKR_ACCOUNT_ID || 'DU1234567';
     
     try {
-      // Try multiple balance endpoints
-      let balanceData = null;
-      let endpoint = '';
+      // Get authentication token
+      const token = await getIBKRAuthToken(baseUrl);
       
-      // Try account summary first
-      try {
-        endpoint = `/iserver/account/${accountId}/summary`;
-        const summaryResponse = await fetch(`${baseUrl}${endpoint}`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        if (summaryResponse.ok) {
-          balanceData = await summaryResponse.json();
+      // Get trading status which includes balance info
+      const statusResponse = await fetch(`${baseUrl}/trading/status`, {
+        method: 'GET',
+        headers: { 
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         }
-      } catch (e) {}
+      });
       
-      // If summary failed, try ledger
-      if (!balanceData) {
-        try {
-          endpoint = `/iserver/account/${accountId}/ledger`;
-          const ledgerResponse = await fetch(`${baseUrl}${endpoint}`, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' }
-          });
-          if (ledgerResponse.ok) {
-            balanceData = await ledgerResponse.json();
-          }
-        } catch (e) {}
-      }
-      
-      if (balanceData) {
-        let message = `💰 <b>Account Balance</b>\n\n`;
+      if (statusResponse.ok) {
+        const statusData = await statusResponse.json();
         
-        if (balanceData.NetLiquidation || balanceData.netliquidation) {
-          const netLiq = balanceData.NetLiquidation?.amount || balanceData.netliquidation || 'N/A';
-          const currency = balanceData.NetLiquidation?.currency || 'USD';
-          message += `💼 <b>Net Liquidation:</b> ${currency} ${netLiq}\n`;
-        }
-        
-        if (balanceData.CashBalance || balanceData.cashbalance) {
-          const cash = balanceData.CashBalance?.amount || balanceData.cashbalance || 'N/A';
-          message += `💵 <b>Cash Balance:</b> USD ${cash}\n`;
-        }
-        
-        if (balanceData.BuyingPower || balanceData.buyingpower) {
-          const buying = balanceData.BuyingPower?.amount || balanceData.buyingpower || 'N/A';
-          message += `⚡ <b>Buying Power:</b> USD ${buying}\n`;
-        }
-        
-        if (balanceData.UnrealizedPnL || balanceData.unrealizedpnl) {
-          const pnl = balanceData.UnrealizedPnL?.amount || balanceData.unrealizedpnl || 'N/A';
-          message += `📈 <b>Unrealized P&L:</b> USD ${pnl}\n`;
-        }
-        
-        message += `\n🏦 <b>Account:</b> ${accountId}\n📅 <b>Updated:</b> ${new Date().toLocaleTimeString()}`;
+        const message = `💰 <b>Account Balance & Status</b>
+
+✅ <b>Connection Status:</b>
+• IBKR Connected: ${statusData.ibkr_connected ? '✅' : '❌'}
+• Credentials Set: ${statusData.credentials_set ? '✅' : '❌'}
+• System Status: ${statusData.system_status || 'Unknown'}
+
+📊 <b>Trading Information:</b>
+• Trading Mode: ${statusData.trading_mode || 'Unknown'}
+• Active Positions: ${statusData.active_positions || 0}
+• Total Orders: ${statusData.total_orders || 0}
+• Last Activity: ${statusData.last_activity || 'None'}
+
+💼 <b>Capabilities:</b>
+${statusData.capabilities ? Object.entries(statusData.capabilities).map(([key, value]: [string, any]) => 
+  `• ${key.replace('_', ' ')}: ${value ? '✅' : '❌'}`
+).join('\n') : '• Standard capabilities'}
+
+🏦 <b>Account:</b> ${accountId}
+📅 <b>Updated:</b> ${new Date().toLocaleTimeString()}`;
         
         await ctx.reply(message, { parse_mode: 'HTML' });
       } else {
-        throw new Error('No balance data available from any endpoint');
+        throw new Error(`Status fetch failed: ${statusResponse.status}`);
       }
     } catch (apiError: any) {
       const message = `💰 <b>Account Balance</b>
 
 ❌ <b>Unable to fetch balance:</b>
 Error: ${apiError.message}
-Account: ${accountId}
-Last tried: ${baseUrl}/iserver/account/${accountId}
+Endpoint: ${baseUrl}/trading/status
 
 🔧 <b>Possible Issues:</b>
 • IBKR Gateway not authenticated
-• Account not accessible  
-• API endpoints not available
+• Server connection issue  
+• Trading status unavailable
 
 💡 Try: /ibkr_connect to establish connection`;
       
