@@ -225,7 +225,12 @@ function connectToSynoptic() {
         setTimeout(() => reject(new Error('AI analysis timeout')), 8000) // 8 second max
       );
       
-      let analysis: { summary: string; tickers: string[]; relevanceScore: number };
+      let analysis: { 
+        summary: string; 
+        tickers: string[]; 
+        relevanceScore: number;
+        tickerAnalysis?: Array<{symbol: string; impact: 'positive' | 'negative'; reason: string}>;
+      };
       try {
         analysis = await Promise.race([analysisPromise, timeoutPromise]) as any;
       } catch (error: any) {
@@ -246,6 +251,7 @@ function connectToSynoptic() {
       const alertPromise = sendTrumpAlert({
         summary: analysis.summary,
         tickers: analysis.tickers,
+        tickerAnalysis: analysis.tickerAnalysis, // Add the detailed ticker analysis
         url,
         originalPost: text,
         originalPostTime,

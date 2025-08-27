@@ -78,6 +78,8 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   // Support new ticker analysis format or fall back to legacy
   let finalTickers = tickers || [];
   let finalSummary = summary || 'Market impact analysis of Trump post';
+  let finalTickerAnalysis = tickerAnalysis;
+  let finalRelevanceScore = relevanceScore;
   
   if (tickerAnalysis && Array.isArray(tickerAnalysis)) {
     // New format with ticker analysis
@@ -89,15 +91,17 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
     const analysis = await analyzePost(text || postText);
     finalTickers = analysis.tickers;
     finalSummary = analysis.summary;
+    finalTickerAnalysis = analysis.tickerAnalysis;
+    finalRelevanceScore = analysis.relevanceScore;
   }
   
   await sendTrumpAlert({ 
     summary: finalSummary, 
     tickers: finalTickers, 
-    tickerAnalysis: tickerAnalysis, // Pass the new ticker analysis format
+    tickerAnalysis: finalTickerAnalysis,
     url,
     originalPost: text || postText,
-    relevanceScore
+    relevanceScore: finalRelevanceScore
   });
   res.json({ ok: true });
 });

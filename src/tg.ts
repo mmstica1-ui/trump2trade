@@ -8,16 +8,44 @@ const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
 const chatId = process.env.TELEGRAM_CHAT_ID!;
 
+// Support multiple chat IDs for both personal chat and group
+function getAllChatIds(): string[] {
+  const chatIds = [chatId]; // Always include the main chat
+  
+  // Add group chat if configured
+  const groupChatId = process.env.TELEGRAM_GROUP_CHAT_ID;
+  if (groupChatId && groupChatId.trim() && groupChatId !== '') {
+    // Support comma-separated list of chat IDs
+    const groupIds = groupChatId.split(',').map(id => id.trim()).filter(id => id);
+    chatIds.push(...groupIds);
+  }
+  
+  return chatIds;
+}
+
 function adminOnly(ctx: any) {
   return String(ctx.chat?.id) === String(chatId);
 }
 
-export function sendText(text: string) {
-  return axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
-    chat_id: chatId,
-    text,
-    parse_mode: 'HTML'
-  });
+export async function sendText(text: string) {
+  const chatIds = getAllChatIds();
+  const results = [];
+  
+  for (const targetChatId of chatIds) {
+    try {
+      const result = await axios.post(`https://api.telegram.org/bot${token}/sendMessage`, {
+        chat_id: targetChatId,
+        text,
+        parse_mode: 'HTML'
+      });
+      console.log(`✅ Telegram message sent successfully to ${targetChatId}: ${result.data.result.message_id}`);
+      results.push(result);
+    } catch (error: any) {
+      console.error(`❌ Failed to send Telegram message to ${targetChatId}:`, error?.response?.data || error?.message || error);
+    }
+  }
+  
+  return results[0]; // Return first result for compatibility
 }
 
 export async function sendTrumpAlert(args: { 
@@ -156,11 +184,33 @@ export async function sendTrumpAlert(args: {
     console.warn('Failed to add post to daily analytics:', analyticsError?.message || analyticsError);
   }
 
-  return bot.api.sendMessage(chatId, message, { 
-    parse_mode: 'HTML', 
-    reply_markup: kb,
-    link_preview_options: { is_disabled: false }
-  });
+  // Send to all configured chat IDs (personal + groups)
+  const chatIds = getAllChatIds();
+  const results = [];
+  
+  for (const targetChatId of chatIds) {
+    try {
+      console.log(`🦅 sendTrumpAlert called for chat ${targetChatId}: {
+  summary: "${args.summary}",
+  tickers: ${JSON.stringify(args.tickers)},
+  tickerAnalysis: ${JSON.stringify(args.tickerAnalysis || 'none')},
+  url: '${args.url}'
+}`);
+      
+      const result = await bot.api.sendMessage(targetChatId, message, { 
+        parse_mode: 'HTML', 
+        reply_markup: kb,
+        link_preview_options: { is_disabled: false }
+      });
+      
+      console.log(`✅ Telegram message sent successfully to ${targetChatId}: ${result.message_id}`);
+      results.push(result);
+    } catch (error: any) {
+      console.error(`❌ Failed to send Trump alert to ${targetChatId}:`, error?.response?.data || error?.message || error);
+    }
+  }
+  
+  return results[0]; // Return first result for compatibility
 }
 
 bot.command('help', ctx => ctx.reply('Commands: /help, /ping, /status, /health, /monitor, /daily, /analytics, /safe_mode on|off, /system on|off, /check'));
