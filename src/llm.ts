@@ -56,9 +56,9 @@ export async function analyzePost(
   relevanceScore: number;
   tickerAnalysis?: Array<{symbol: string; impact: 'positive' | 'negative'; reason: string}>;
 }> {
-  // Check if we have a valid API key
-  if (!apiKey || apiKey === 'your-google-api-key-here') {
-    console.log('⚠️ Using mock analysis - no valid Google API key');
+  // Check if we have a valid API key or we're in development mock mode
+  if (!apiKey || apiKey === 'your-google-api-key-here' || apiKey === 'DEVELOPMENT_MOCK_MODE') {
+    console.log('🔧 Development mock mode: Using sample data for Trump post analysis');
     // Update monitoring status for no API key
     try {
       const { getMonitor } = await import('./monitoring.js');

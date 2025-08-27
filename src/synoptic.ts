@@ -315,11 +315,11 @@ function connectToSynoptic() {
     }
   });
   
-  ws.on('error', (error) => {
+  ws.on('error', (error: any) => {
     log.error({ error }, 'Synoptic WebSocket error');
   });
   
-  ws.on('close', (code, reason) => {
+  ws.on('close', (code: any, reason: any) => {
     log.warn({ code, reason: reason.toString() }, '❌ Synoptic WebSocket connection closed');
     ws = null;
     

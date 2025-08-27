@@ -16,7 +16,7 @@ module.exports = {
       TELEGRAM_CHAT_ID: '540751833',
       TELEGRAM_GROUP_CHAT_ID: '',
       // Gemini (Google)
-      GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
+      GOOGLE_API_KEY: 'DEVELOPMENT_MOCK_MODE',
       GEMINI_MODEL: 'gemini-1.5-flash',
       // SYNOPTIC
       SYNOPTIC_API_KEY: '1f082681-21a2-6b80-bf48-2c16d80faa8e',
@@ -27,7 +27,7 @@ module.exports = {
       DISABLE_TRADES: 'true',
       OPS_CHECK_EVERY_MS: '60000',
       // Poller
-      POLL_ENABLED: 'true',
+      POLL_ENABLED: 'false',
       POLL_INTERVAL_MS: '60000',
       TRUTH_PROFILE_URL: 'https://truthsocial.com/@realDonaldTrump'
     },
@@ -39,7 +39,7 @@ module.exports = {
       TELEGRAM_CHAT_ID: '540751833',
       TELEGRAM_GROUP_CHAT_ID: '',
       // Gemini (Google)
-      GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
+      GOOGLE_API_KEY: 'DEVELOPMENT_MOCK_MODE',
       GEMINI_MODEL: 'gemini-1.5-flash',
       // SYNOPTIC
       SYNOPTIC_API_KEY: '1f082681-21a2-6b80-bf48-2c16d80faa8e',
@@ -50,7 +50,7 @@ module.exports = {
       DISABLE_TRADES: 'true',
       OPS_CHECK_EVERY_MS: '60000',
       // Poller
-      POLL_ENABLED: 'true',
+      POLL_ENABLED: 'false',
       POLL_INTERVAL_MS: '60000',
       TRUTH_PROFILE_URL: 'https://truthsocial.com/@realDonaldTrump'
     },
