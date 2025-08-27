@@ -149,7 +149,7 @@ export async function sendTrumpAlert(args: {
   
   // Add enhanced ticker analysis or fallback to simple list
   const relevanceEmoji = relevanceScore >= 8 ? '🎯' : relevanceScore >= 6 ? '🟢' : '🟡';
-  message += `📊 <b>Trading Opportunities:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
+  message += `📈 <b>Trading Opportunities:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
   
   if (args.tickerAnalysis && args.tickerAnalysis.length > 0) {
     // NEW FORMAT: Individual ticker impact analysis

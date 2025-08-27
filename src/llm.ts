@@ -171,6 +171,14 @@ function getMockAnalysis(text: string): {
     relevanceScore = 9;
   }
   
+  // Tech + Energy analysis (combined topics get higher relevance)
+  else if ((textLower.includes('ai') || textLower.includes('tech')) && 
+           (textLower.includes('energy') || textLower.includes('dominate'))) {
+    summary = 'Trump\'s vision for AI and energy dominance could significantly boost technology and energy sectors.';
+    tickers = ['XLK', 'XLE', 'QQQ'];
+    relevanceScore = 9; // High relevance for dual-sector impact
+  }
+  
   // Tech analysis
   else if (textLower.includes('tech') || textLower.includes('social media') || textLower.includes('ai')) {
     summary = 'Technology sector regulation discussions can create volatility in tech stocks and related ETFs.';
@@ -224,22 +232,22 @@ function generateTickerAnalysis(tickers: string[], text: string): Array<{symbol:
     let reason = 'Market impact';
     
     // Tech/AI analysis
-    if ((textLower.includes('ai') || textLower.includes('tech') || textLower.includes('innovation')) && 
+    if ((textLower.includes('ai') || textLower.includes('tech') || textLower.includes('innovation') || textLower.includes('dominate')) && 
         ['NVDA', 'AMD', 'XLK', 'QQQ', 'GOOGL', 'META', 'AAPL', 'MSFT'].includes(ticker)) {
       impact = 'positive';
       reason = ticker === 'NVDA' ? 'AI dominance leadership' :
-               ticker === 'XLK' ? 'Technology sector strength' :
-               ticker === 'QQQ' ? 'Tech index gains' :
-               'Innovation leadership';
+               ticker === 'XLK' ? 'Technology sector dominance' :
+               ticker === 'QQQ' ? 'Tech leadership strength' :
+               'Innovation sector boost';
     }
     
     // Energy analysis  
-    else if ((textLower.includes('energy') || textLower.includes('oil') || textLower.includes('drill')) &&
+    else if ((textLower.includes('energy') || textLower.includes('oil') || textLower.includes('drill') || textLower.includes('independence')) &&
              ['XLE', 'USO', 'XOM', 'CVX'].includes(ticker)) {
       impact = 'positive';
-      reason = ticker === 'XLE' ? 'Energy independence policy' :
-               ticker === 'USO' ? 'Oil sector strength' :
-               'Energy production boost';
+      reason = ticker === 'XLE' ? 'Energy independence dominance' :
+               ticker === 'USO' ? 'Oil sector leadership' :
+               'Energy dominance policy';
     }
     
     // China/Trade analysis
