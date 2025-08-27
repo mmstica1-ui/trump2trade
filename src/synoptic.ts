@@ -92,8 +92,10 @@ function extractPostData(data: any): { text: string; url: string; postId: string
 
 let ws: WebSocket | null = null;
 let reconnectAttempts = 0;
+let keepAliveInterval: NodeJS.Timeout | null = null;
 const MAX_RECONNECT_ATTEMPTS = 10;
 const RECONNECT_DELAY_BASE = 1000; // Start with 1 second
+const KEEP_ALIVE_INTERVAL_MS = 15000; // 15 seconds for faster detection
 
 function connectToSynoptic() {
   const wsUrl = process.env.SYNOPTIC_WS || 'wss://api.synoptic.com/v1/ws';
@@ -112,7 +114,7 @@ function connectToSynoptic() {
   ws = new WebSocket(fullUrl);
   
   ws.on('open', () => {
-    log.info('Connected to Synoptic WebSocket');
+    log.info('✅ Synoptic WebSocket connected successfully to Trump stream');
     reconnectAttempts = 0;
     
     // Update monitoring status
@@ -120,7 +122,7 @@ function connectToSynoptic() {
       import('./monitoring.js').then(({ getMonitor }) => {
         const monitor = getMonitor();
         monitor.setConnectionStatus('synoptic', true);
-        log.info('Updated Synoptic connection status to connected');
+        log.info('📊 Updated Synoptic connection status to connected');
       }).catch(() => {
         log.debug('Could not update monitoring status (monitor not initialized)');
       });
@@ -136,7 +138,15 @@ function connectToSynoptic() {
     };
     
     ws?.send(JSON.stringify(subscriptionMessage));
-    log.info('Sent subscription message to Synoptic');
+    log.info('📧 Sent subscription message to Synoptic');
+    
+    // Start keep-alive ping every 15 seconds for faster connection monitoring
+    keepAliveInterval = setInterval(() => {
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
+        log.info('📡 Sent WebSocket keepalive ping');
+      }
+    }, KEEP_ALIVE_INTERVAL_MS);
   });
   
   ws.on('message', async (data: WebSocket.Data) => {
@@ -269,15 +279,21 @@ function connectToSynoptic() {
   });
   
   ws.on('close', (code, reason) => {
-    log.warn({ code, reason: reason.toString() }, 'Synoptic WebSocket connection closed');
+    log.warn({ code, reason: reason.toString() }, '❌ Synoptic WebSocket connection closed');
     ws = null;
+    
+    // Clear keep-alive interval
+    if (keepAliveInterval) {
+      clearInterval(keepAliveInterval);
+      keepAliveInterval = null;
+    }
     
     // Update monitoring status
     try {
       import('./monitoring.js').then(({ getMonitor }) => {
         const monitor = getMonitor();
         monitor.setConnectionStatus('synoptic', false);
-        log.info('Updated Synoptic connection status to disconnected');
+        log.info('📊 Updated Synoptic connection status to disconnected');
       }).catch(() => {
         log.debug('Could not update monitoring status (monitor not initialized)');
       });
@@ -288,13 +304,13 @@ function connectToSynoptic() {
       const delay = RECONNECT_DELAY_BASE * Math.pow(2, reconnectAttempts);
       reconnectAttempts++;
       
-      log.info({ attempt: reconnectAttempts, delay }, 'Scheduling reconnection to Synoptic');
+      log.info({ attempt: reconnectAttempts, delay }, '🔄 Scheduling reconnection to Synoptic');
       
       setTimeout(() => {
         connectToSynoptic();
       }, delay);
     } else {
-      log.error('Maximum reconnection attempts reached, giving up on Synoptic connection');
+      log.error('💀 Maximum reconnection attempts reached, giving up on Synoptic connection');
     }
   });
 }
@@ -311,9 +327,15 @@ export function startSynopticListener() {
 
 export function stopSynopticListener() {
   if (ws) {
-    log.info('Stopping Synoptic WebSocket listener');
+    log.info('🛑 Stopping Synoptic WebSocket listener');
     ws.close();
     ws = null;
+  }
+  
+  // Clear keep-alive interval
+  if (keepAliveInterval) {
+    clearInterval(keepAliveInterval);
+    keepAliveInterval = null;
   }
 }
 
