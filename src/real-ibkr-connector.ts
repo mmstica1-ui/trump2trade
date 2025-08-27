@@ -5,6 +5,8 @@ export class RealIBKRConnector {
   private password: string;
   private accountId: string;
   private mode: 'paper' | 'live';
+  private authToken: string | null = null;
+  private tokenExpiry: number = 0;
 
   constructor() {
     this.baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
@@ -12,6 +14,36 @@ export class RealIBKRConnector {
     this.password = process.env.TWS_PASSWORD || 'trump123!';
     this.accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
     this.mode = (process.env.IBKR_GATEWAY_MODE as 'paper' | 'live') || 'paper';
+  }
+
+  private async getAuthToken(): Promise<string> {
+    // Check if we have a valid token
+    if (this.authToken && Date.now() < this.tokenExpiry) {
+      return this.authToken;
+    }
+
+    // Get new token from your server
+    const authResponse = await fetch(`${this.baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        username: this.username,
+        password: this.password,
+        trading_mode: this.mode
+      })
+    });
+
+    if (!authResponse.ok) {
+      throw new Error(`Authentication failed: ${authResponse.status}`);
+    }
+
+    const authData = await authResponse.json();
+    this.authToken = authData.api_token;
+    // Token expires in 1 hour, refresh 5 minutes before
+    this.tokenExpiry = Date.now() + (55 * 60 * 1000);
+
+    console.log('✅ Successfully authenticated with your IBKR server');
+    return this.authToken || '';
   }
 
   async testRealConnection(): Promise<{connected: boolean, data?: any, error?: string}> {
@@ -79,9 +111,14 @@ export class RealIBKRConnector {
   }
 
   async getRealBalance(): Promise<any> {
-    // Try your server's trading endpoints first
+    // Get authentication token first
+    const token = await this.getAuthToken();
+    
+    // Try your server's trading endpoints with auth
     try {
-      const response = await fetch(`${this.baseUrl}/trading/balance`);
+      const response = await fetch(`${this.baseUrl}/trading/balance`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) {
         return response.json();
       }
@@ -97,10 +134,15 @@ export class RealIBKRConnector {
     return response.json();
   }
 
-  async getRealPositions(): Promise<any[]> {
-    // Try your server's trading endpoints first
+  async getRealPositions(): Promise<any> {
+    // Get authentication token first
+    const token = await this.getAuthToken();
+    
+    // Try your server's trading endpoints with auth
     try {
-      const response = await fetch(`${this.baseUrl}/trading/positions`);
+      const response = await fetch(`${this.baseUrl}/trading/positions`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
       if (response.ok) {
         return response.json();
       }

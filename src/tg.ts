@@ -503,36 +503,37 @@ bot.command('real_balance', async (ctx) => {
     message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
     message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
     
-    // Check authentication requirement
-    const balanceResponse = await fetch(`${process.env.IBKR_BASE_URL}/trading/balance`);
-    const positionsResponse = await fetch(`${process.env.IBKR_BASE_URL}/trading/positions`);
-    
-    if (balanceResponse.status === 403 || positionsResponse.status === 403) {
-      message += `🔐 <b>Authentication Required</b>\n\n`;
-      message += `Your server requires authentication to access trading data.\n\n`;
-      message += `✅ <b>Server Status:</b>\n`;
-      message += `├─ Health: ${serverHealth.status}\n`;
-      message += `├─ IBKR Connected: ✅\n`;
-      message += `├─ Trading Ready: ✅\n`;
-      message += `└─ Version: ${serverHealth.version}\n\n`;
-      message += `🔧 <b>To Access Real Data:</b>\n`;
-      message += `Configure authentication in your server to allow balance/positions access.\n\n`;
-      message += `📊 <b>Current Integration:</b> Connected to YOUR server ✅`;
-    } else if (balanceResponse.ok && positionsResponse.ok) {
-      // Got real data from your server
-      const balance = await balanceResponse.json();
-      const positions = await positionsResponse.json();
+    // Try to get real balance data using authentication
+    try {
+      const { realIBKR } = await import('./real-ibkr-connector.js');
+      const balance = await realIBKR.getRealBalance();
+      const positions = await realIBKR.getRealPositions();
       
-      message += `💰 <b>Balance Data:</b>\n`;
-      message += `${JSON.stringify(balance, null, 2)}\n\n`;
-      message += `📊 <b>Positions Data:</b>\n`;
-      message += `${JSON.stringify(positions, null, 2)}\n\n`;
-      message += `✅ <b>Real data from YOUR server!</b>`;
-    } else {
-      message += `❌ <b>Data Access Error</b>\n\n`;
-      message += `Balance endpoint: ${balanceResponse.status}\n`;
-      message += `Positions endpoint: ${positionsResponse.status}\n\n`;
-      message += `🔧 Check your server API endpoints`;
+      message += `💰 <b>Account Balance:</b>\n`;
+      if (balance && typeof balance === 'object') {
+        message += `${JSON.stringify(balance, null, 2)}\n\n`;
+      } else {
+        message += `Balance data: ${balance}\n\n`;
+      }
+      
+      message += `📊 <b>Positions:</b>\n`;
+      if (positions && typeof positions === 'object' && 'positions' in positions) {
+        if (positions.total_positions === 0) {
+          message += `No open positions\n\n`;
+        } else {
+          message += `${JSON.stringify(positions, null, 2)}\n\n`;
+        }
+      } else {
+        message += `${JSON.stringify(positions, null, 2)}\n\n`;
+      }
+      
+      message += `✅ <b>Authenticated access to YOUR server!</b>\n`;
+      message += `🎯 Account: ${process.env.IBKR_ACCOUNT_ID}\n`;
+      message += `📊 Trading Mode: ${positions.trading_mode || 'paper'}`;
+    } catch (error: any) {
+      message += `❌ <b>Authentication Error</b>\n\n`;
+      message += `Error: ${error.message}\n\n`;
+      message += `🔧 Check server connection and credentials.`;
     }
     
     await ctx.reply(message, { parse_mode: 'HTML' });
@@ -565,39 +566,35 @@ bot.command('real_positions', async (ctx) => {
     message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
     message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
     
-    const positionsResponse = await fetch(`${process.env.IBKR_BASE_URL}/trading/positions`);
-    
-    if (positionsResponse.status === 403) {
-      message += `🔐 <b>Authentication Required</b>\n\n`;
-      message += `Your server requires authentication to access positions data.\n\n`;
-      message += `✅ <b>Server Connected:</b>\n`;
-      message += `├─ Health: ${serverHealth.status}\n`;
-      message += `├─ IBKR Connected: ✅\n`;
-      message += `├─ Trading Ready: ✅\n`;
-      message += `└─ Version: ${serverHealth.version}\n\n`;
-      message += `🔧 Configure authentication in your server for positions access.`;
-    } else if (positionsResponse.ok) {
-      // Got real positions from your server
-      const positions = await positionsResponse.json();
+    // Try to get real positions using authentication
+    try {
+      const { realIBKR } = await import('./real-ibkr-connector.js');
+      const positions = await realIBKR.getRealPositions();
       
-      message += `📊 <b>Live Positions Data:</b>\n\n`;
+      message += `📊 <b>Live Positions:</b>\n\n`;
       
-      if (positions && Array.isArray(positions) && positions.length > 0) {
-        message += `Found ${positions.length} position(s):\n\n`;
-        positions.forEach((pos: any, index: number) => {
-          message += `${index + 1}. ${JSON.stringify(pos, null, 2)}\n\n`;
-        });
-      } else if (positions && typeof positions === 'object') {
-        message += `Positions response:\n${JSON.stringify(positions, null, 2)}\n\n`;
+      if (positions && typeof positions === 'object' && 'total_positions' in positions) {
+        message += `Total Positions: ${(positions as any).total_positions}\n`;
+        message += `Trading Mode: ${(positions as any).trading_mode || 'paper'}\n`;
+        message += `Last Updated: ${(positions as any).last_updated || 'Unknown'}\n\n`;
+        
+        if ((positions as any).total_positions === 0) {
+          message += `✅ <b>No Open Positions</b>\n`;
+          message += `Your account is ready for trading.\n\n`;
+        } else {
+          message += `<b>Active Positions:</b>\n`;
+          message += `${JSON.stringify((positions as any).positions, null, 2)}\n\n`;
+        }
       } else {
-        message += `No active positions found in your account.\n\n`;
+        message += `Positions data:\n${JSON.stringify(positions, null, 2)}\n\n`;
       }
       
-      message += `✅ <b>Real data from YOUR server!</b>`;
-    } else {
+      message += `✅ <b>Authenticated access to YOUR server!</b>\n`;
+      message += `🎯 Account: ${process.env.IBKR_ACCOUNT_ID}`;
+    } catch (error: any) {
       message += `❌ <b>Positions Access Error</b>\n\n`;
-      message += `Status: ${positionsResponse.status}\n`;
-      message += `Check your server API configuration.`;
+      message += `Error: ${error.message}\n\n`;
+      message += `🔧 Check authentication with your server.`;
     }
     
     await ctx.reply(message, { parse_mode: 'HTML' });
