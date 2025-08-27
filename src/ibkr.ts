@@ -14,20 +14,9 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   if ((process.env.DISABLE_TRADES || '').toLowerCase() === 'true') {
     return '🧪 Preview mode is ON (DISABLE_TRADES=true). No orders will be sent.';
   }
-  
-  // Check if IBKR Gateway is accessible
-  if (!base || !acct) {
-    return '❗️ IBKR configuration missing. Please set IBKR_BASE_URL and IBKR_ACCOUNT_ID.';
-  }
-  
-  // Check IBKR Gateway mode
-  if (process.env.IBKR_GATEWAY_MODE === 'SIMULATION' || process.env.IBKR_GATEWAY_MODE === 'MANUAL' || !await isIbkrGatewayRunning()) {
-    return simulateIbkrTrade(p);
-  }
-  
   if (p.a === 'preview') return 'No trade. This is a dry run.';
   if (p.a === 'manual_trade') {
-    const manualTradingUrl = process.env.MANUAL_TRADING_URL || 'https://ndcdyn.interactivebrokers.com/portal.proxy/v1/portal/';
+    const manualTradingUrl = process.env.MANUAL_TRADING_URL || 'https://your-trading-platform.com';
     return `📈 Manual Trading: ${manualTradingUrl}\n\n🎯 Use this link to execute trades manually on your preferred platform.`;
   }
   if (!p.t) throw new Error('Missing ticker');
@@ -106,93 +95,4 @@ async function placeMarketOptionOrder(optionConid: number, side: 'BUY'|'SELL') {
   };
   const r = await axios.post(`${base}/iserver/account/${acct}/orders`, body, { httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
   return Array.isArray(r.data) ? r.data[0] : r.data;
-}
-
-async function isIbkrGatewayRunning(): Promise<boolean> {
-  try {
-    // First check if the Railway server is running
-    const healthCheck = await axios.get(`${base}/health`, { 
-      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-      timeout: 5000
-    });
-    
-    if (healthCheck.status === 200) {
-      console.log(`✅ Railway IBKR server is running: ${healthCheck.data?.status}`);
-      
-      // Try to check IBKR auth status
-      try {
-        const authCheck = await axios.get(`${base}/iserver/auth/status`, { 
-          httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-          timeout: 5000
-        });
-        return authCheck.status === 200 && authCheck.data?.authenticated === true;
-      } catch (authError: any) {
-        console.log(`🔧 IBKR Gateway not fully configured on Railway server: ${authError.message}`);
-        // Server is running but IBKR not configured - still use simulation
-        return false;
-      }
-    }
-    
-    return false;
-  } catch (error: any) {
-    console.log(`❌ Railway server not accessible: ${error.message}`);
-    return false;
-  }
-}
-
-function simulateIbkrTrade(p: InlineTradePayload): string {
-  if (!p.t) throw new Error('Missing ticker');
-  
-  const isBuy = p.a?.startsWith('buy');
-  const isCall = p.a?.endsWith('call');
-  const side = isBuy ? 'BUY' : 'SELL';
-  const type = isCall ? 'CALL' : 'PUT';
-  
-  // Simulate realistic option parameters
-  const mockPrice = Math.random() * 500 + 50; // $50-550
-  const mockStrike = Math.round(mockPrice * (isCall ? 1.005 : 0.995));
-  const mockExpiry = getNextFriday();
-  const mockOrderId = `SIM${Date.now()}`;
-  
-  const mode = process.env.IBKR_GATEWAY_MODE || 'PAPER';
-  const accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
-  
-  return `📊 <b>IBKR PAPER TRADING</b> | Account: ${accountId}
-  
-✅ <b>${side} ${type} ORDER PREPARED</b>
-🎯 ${p.t} ${mockExpiry} Strike $${mockStrike} × ${qty}
-💰 Estimated Cost: $${mockPrice.toFixed(2)}
-📅 Expiry: ${mockExpiry}
-🔖 Reference: ${mockOrderId}
-
-${mode === 'MANUAL' ? 
-`🎯 <b>Manual Execution Required</b>
-👆 Execute this trade on IBKR platform:
-
-🌐 <b>IBKR Trading Interface:</b>
-${process.env.MANUAL_TRADING_URL}
-
-📋 <b>Order Parameters:</b>
-• Underlying: ${p.t}
-• Option Type: ${type.toUpperCase()}
-• Strike Price: $${mockStrike}
-• Expiration: ${mockExpiry}
-• Side: ${side.toUpperCase()}
-• Quantity: ${qty} contracts` :
-`🔧 <b>IBKR Gateway Status:</b>
-✅ Paper Account Connected (${accountId})
-🔄 Attempting automated execution...
-
-⚠️ <b>Note:</b> Paper trading environment active`}
-
-💡 <b>Professional Options Trading</b> | Risk Management Enabled`;
-}
-
-function getNextFriday(): string {
-  const today = new Date();
-  const dayOfWeek = today.getDay();
-  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // Next Friday
-  const nextFriday = new Date(today);
-  nextFriday.setDate(today.getDate() + daysUntilFriday);
-  return nextFriday.toISOString().split('T')[0];
 }

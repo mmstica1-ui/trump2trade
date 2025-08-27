@@ -8,30 +8,17 @@ import { initializeDailyAnalytics } from './daily-analytics.js';
 const requiredEnvVars = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
-  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
-  IBKR_BASE_URL: process.env.IBKR_BASE_URL,
-  IBKR_ACCOUNT_ID: process.env.IBKR_ACCOUNT_ID,
 };
 
 // Check critical environment variables
 const missingVars = Object.entries(requiredEnvVars)
-  .filter(([key, value]) => !value || value === `your-${key.toLowerCase().replace('_', '-')}-here` || value === 'DEVELOPMENT_MOCK_MODE')
+  .filter(([key, value]) => !value || value === `your-${key.toLowerCase().replace('_', '-')}-here`)
   .map(([key]) => key);
 
 if (missingVars.length > 0) {
-  console.warn(`🚨 CRITICAL: Missing environment variables: ${missingVars.join(', ')}`);
-  console.warn('⚠️  IBKR Trading will NOT work without proper configuration!');
-  console.warn('📋 Check ecosystem.config.cjs and .env.production files');
+  console.warn(`⚠️  Missing environment variables: ${missingVars.join(', ')}`);
+  console.warn('System will run in limited mode. Set proper values for full functionality.');
 }
-
-// Configuration validation logging
-console.log(`🔧 Configuration Status:`);
-console.log(`   Telegram: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Configured' : '❌ Missing'}`);
-console.log(`   Gemini AI: ${process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'DEVELOPMENT_MOCK_MODE' ? '✅ Real API' : '🧪 Mock Mode'}`);
-console.log(`   IBKR Gateway: ${process.env.IBKR_BASE_URL ? '✅ Configured' : '❌ Missing'}`);
-console.log(`   IBKR Account: ${process.env.IBKR_ACCOUNT_ID ? '✅ Configured' : '❌ Missing'}`);
-console.log(`   Trading: ${process.env.DISABLE_TRADES === 'false' ? '✅ ENABLED' : '🛡️ DISABLED (Safe Mode)'}`);
-console.log(`   ────────────────────────────────────────`);
 import bot, { sendText } from './tg.js';
 import { scheduleDailyStats } from './stats.js';
 import { startOpsSelfChecks } from './ops.js';
@@ -74,20 +61,10 @@ app.post('/webhook/genspark', handleGensparkWebhook);
 app.get('/webhook/genspark', (_: express.Request, res: express.Response) => 
   res.status(405).json({ ok: false, use: 'POST' }));
 
-// Telegram bot webhook
-app.post('/webhook/telegram', async (req: express.Request, res: express.Response) => {
-  try {
-    await bot.handleUpdate(req.body);
-    res.json({ ok: true });
-  } catch (error: any) {
-    log.error({ error: error?.message || error }, '❌ Telegram webhook error');
-    res.status(500).json({ ok: false });
-  }
-});
-
 // dev helper: test media analysis
 app.post('/dev/media-test', async (req: express.Request, res: express.Response) => {
   const { text, mediaUrls } = req.body || {};
+  
   const { analyzePost } = await import('./llm.js');
   const { sendTrumpAlert } = await import('./tg.js');
   
@@ -159,7 +136,7 @@ app.get('/api/settings', (req: express.Request, res: express.Response) => {
     broker: {
       username: process.env.TRUMP_BOT_IBKR_USERNAME || '',
       password: '***hidden***', // Don't expose password
-      gatewayUrl: process.env.IBKR_GATEWAY_URL || 'http://localhost:5000',
+      gatewayUrl: process.env.IBKR_GATEWAY_URL || 'https://web-production-a020.up.railway.app',
       tradingMode: process.env.TRUMP_BOT_TRADING_MODE || 'paper',
       environment: process.env.TRUMP_BOT_ENVIRONMENT || 'production',
       safeMode: process.env.DISABLE_TRADES === 'true',
@@ -198,7 +175,7 @@ app.post('/api/settings', (req: express.Request, res: express.Response) => {
 app.get('/api/test-connection', async (req: express.Request, res: express.Response) => {
   try {
     const axios = (await import('axios')).default;
-    const railwayUrl = 'http://localhost:5000';
+    const railwayUrl = 'https://web-production-a020.up.railway.app';
     
     // Test Railway connection
     const response = await axios.get(`${railwayUrl}/health`, { timeout: 5000 });
@@ -233,7 +210,7 @@ app.post('/api/test-ibkr', async (req: express.Request, res: express.Response) =
     
     // Test Railway IBKR connection
     const axios = (await import('axios')).default;
-    const railwayUrl = 'http://localhost:5000';
+    const railwayUrl = 'https://web-production-a020.up.railway.app';
     
     try {
       const configResponse = await axios.get(`${railwayUrl}/config`, { timeout: 5000 });
@@ -303,20 +280,8 @@ app.listen(PORT, async () => {
   initializeDailyAnalytics();
   log.info('Daily analytics system initialized');
   
-  // Initialize bot without starting polling to prevent hanging
-  try {
-    // Delete any existing webhook first
-    await bot.api.deleteWebhook();
-    log.info('🧹 Webhook deleted');
-    
-    // Test bot connectivity
-    const me = await bot.api.getMe();
-    log.info({ botInfo: me }, '✅ Telegram bot initialized successfully');
-    monitor.setConnectionStatus('telegram', true);
-  } catch (botError: any) {
-    log.error({ error: botError?.message || botError }, '❌ Failed to initialize Telegram bot');
-    monitor.setConnectionStatus('telegram', false);
-  }
+  bot.start();
+  monitor.setConnectionStatus('telegram', true);
   
   // Initialize Gemini status check
   const geminiApiKey = process.env.GOOGLE_API_KEY;
@@ -380,15 +345,4 @@ app.listen(PORT, async () => {
       throttleMs: STARTUP_MSG_THROTTLE_MS 
     }, 'Startup message throttled (too soon after last restart)');
   }
-  
-  // Start bot polling in background (non-blocking) - CRITICAL FIX
-  setTimeout(async () => {
-    try {
-      log.info('🤖 Starting Telegram bot polling...');
-      bot.start(); // Start polling asynchronously
-      log.info('✅ Bot polling started');
-    } catch (pollError: any) {
-      log.error({ error: pollError?.message || pollError }, '❌ Failed to start bot polling');
-    }
-  }, 1000);
 });

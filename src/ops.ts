@@ -9,7 +9,7 @@ let healthCheckHandle: any = null;
 
 export function startOpsSelfChecks() {
   const every = Number(process.env.OPS_CHECK_EVERY_MS || '60000');
-  const checkIbkr = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true'; // Re-enabled with new server
+  const checkIbkr = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true';
   
   if (healthCheckHandle) clearInterval(healthCheckHandle);
   
@@ -34,8 +34,8 @@ export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolea
   try {
     const base = process.env.IBKR_BASE_URL;
     if (base) {
-      const r = await axios.get(`${base}/health`, { timeout: 5000, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
-      ibkrOk = !!(r.data?.ibkr_connected && r.data?.trading_ready);
+      const r = await axios.get(`${base}/iserver/auth/status`, { timeout: 5000, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
+      ibkrOk = !!(r.data?.authenticated);
     }
   } catch {}
   return { appOk, ibkrOk };

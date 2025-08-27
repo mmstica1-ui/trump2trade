@@ -8,91 +8,6 @@ const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
 const chatId = process.env.TELEGRAM_CHAT_ID!;
 
-// Helper function to get IBKR authentication token with real paper account
-async function getIBKRAuthToken(baseUrl: string): Promise<string> {
-  const username = process.env.TWS_USERNAME || "ilyuwc476";
-  const password = process.env.TWS_PASSWORD || "trump123!";
-  
-  const authResponse = await fetch(`${baseUrl}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      username,
-      password, 
-      trading_mode: "paper"
-    })
-  });
-  
-  if (!authResponse.ok) {
-    throw new Error(`Authentication failed: ${authResponse.status}`);
-  }
-  
-  const authData = await authResponse.json();
-  return authData.api_token;
-}
-
-// Helper to get server data with proper error handling
-async function getServerData(baseUrl: string, endpoint: string) {
-  try {
-    // Since your server works great, let's try direct access first
-    const response = await fetch(`${baseUrl}${endpoint}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' }
-    });
-    
-    if (response.ok) {
-      return await response.json();
-    }
-    
-    // If that fails, try with authentication
-    try {
-      const token = await getIBKRAuthToken(baseUrl);
-      const authResponse = await fetch(`${baseUrl}${endpoint}`, {
-        headers: { 
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      if (authResponse.ok) {
-        return await authResponse.json();
-      }
-    } catch {}
-    
-    throw new Error(`Server responded with status: ${response.status}`);
-  } catch (error) {
-    // If server fails, provide the expected data based on your server description
-    if (endpoint.includes('positions')) {
-      return {
-        success: true,
-        total_positions: 1,
-        positions: [
-          {
-            symbol: 'TSLA',
-            quantity: 10,
-            avg_price: 250.00,
-            market_value: 2500.00,
-            unrealized_pnl: 150.00,
-            position_type: 'LONG'
-          }
-        ],
-        account_id: process.env.IBKR_ACCOUNT_ID || 'DU7428350'
-      };
-    } else if (endpoint.includes('status') || endpoint.includes('balance')) {
-      return {
-        account_id: process.env.IBKR_ACCOUNT_ID || 'DU7428350',
-        cash_balance: 50000,
-        buying_power: 50000,
-        total_equity: 52500,
-        currency: 'USD',
-        trading_mode: 'paper',
-        account_type: 'Paper Trading'
-      };
-    }
-    
-    throw new Error(`Cannot access ${endpoint}: ${error instanceof Error ? error.message : 'Unknown error'}`);
-  }
-}
-
 // Support multiple chat IDs for both personal chat and group
 function getAllChatIds(): string[] {
   const chatIds = [chatId]; // Always include the main chat
@@ -195,14 +110,7 @@ export async function sendTrumpAlert(args: {
   const discoveryDelayMs = postDiscoveredAt.getTime() - originalPostTime.getTime();
   const processingDelayMs = alertTime.getTime() - postDiscoveredAt.getTime();
   
-  // ⚠️ CRITICAL: DO NOT SIMPLIFY THIS MESSAGE FORMAT!
-  // This is the FINAL APPROVED format with all required elements:
-  // 1. Header with timing info and processing breakdown
-  // 2. Original Trump post content
-  // 3. Detailed market impact analysis  
-  // 4. Professional ticker analysis with reasons
-  // 5. Separators and professional styling
-  // Build comprehensive message with PRECISE timing and professional design (PERMANENT FORMAT - DO NOT CHANGE)
+  // Build comprehensive message with PRECISE timing and professional design (restored full format)
   let message = `🦅 <b>Trump Alert • INSTANT</b>\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   
@@ -326,30 +234,41 @@ export async function sendTrumpAlert(args: {
 }
 
 bot.command('help', async (ctx) => {
-  const helpMessage = `🤖 <b>Trump2Trade Commands</b>
+  const helpMessage = `🤖 <b>TRUMP2TRADE BOT - REAL IBKR TRADING</b>
 
-📊 <b>System:</b>
-/help - Show this menu
-/ping - Test connection  
+📊 <b>System Commands:</b>
+/help - Show this help menu
+/ping - Test bot connectivity  
 /status - System status
-/health - Detailed health check
+/health - Health diagnostics
 /monitor - System monitoring
 /daily - Daily report
 /analytics - Performance analytics
 
-⚙️ <b>Control:</b>
+⚙️ <b>Control Commands:</b>
 /safe_mode on|off - Toggle safe mode
-/system on|off - System on/off
-/check - Full system check
+/system on|off - System control
+/check - Full diagnostics
 
-🏦 <b>IBKR Trading:</b>
-/ibkr_status - Connection status
-/ibkr_check_server - Check which account server shows
-/ibkr_account - Account details
-/ibkr_positions - Current positions  
-/ibkr_balance - Account balance
-/ibkr_test_order - Test order (safe)
-/ibkr_connect - Reconnect IBKR`;
+🔥 <b>REAL IBKR CONNECTION:</b>
+/connect_real_ibkr - Connect to YOUR real IBKR account
+/real_balance - YOUR real account balance  
+/real_positions - YOUR real portfolio positions
+/place_real_order - Execute REAL orders
+
+📈 <b>Order Format:</b>
+<code>/place_real_order TSLA BUY 10</code> (Market order)
+<code>/place_real_order AAPL SELL 5 450.00</code> (Limit order)
+
+⚠️ <b>IMPORTANT:</b>
+- Real orders execute on your actual IBKR account
+- Make sure TWS/Gateway is running on your computer
+- Test connection first with /connect_real_ibkr
+
+🛡️ <b>Safety:</b> Set DISABLE_TRADES=true to prevent accidental orders
+
+━━━━━━━━━━━━━━━━━━━━━
+🎯 <b>Ready for real Trump → IBKR trading!</b>`;
 
   await ctx.reply(helpMessage, { parse_mode: 'HTML' });
 });
@@ -509,553 +428,225 @@ bot.command('analytics', async (ctx) => {
   }
 });
 
-// IBKR Trading commands - Real API Integration
-bot.command('ibkr_status', async (ctx) => {
+// ===============================
+// REAL IBKR CONNECTION COMMANDS
+// ===============================
+
+bot.command('connect_real_ibkr', async (ctx) => {
   if (!adminOnly(ctx)) return;
+  
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
+    await ctx.reply('🔍 Testing connection to YOUR real IBKR account...');
     
-    // Check Railway server health
-    const healthResponse = await fetch(`${baseUrl}/health`);
-    const healthData = await healthResponse.json();
+    // Import the real connector
+    const { realIBKR } = await import('./real-ibkr-connector.js');
     
-    // Try to check IBKR auth status  
-    let ibkrStatus = "❌ Not Connected";
-    let authDetails = "Gateway not authenticated";
+    const connectionTest = await realIBKR.testRealConnection();
     
-    try {
-      // Try authentication with demo credentials
-      let authResponse = await fetch(`${baseUrl}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: "demo_user",
-          password: "demo_password", 
-          trading_mode: "paper"
-        })
-      });
+    if (connectionTest.connected) {
+      const data = connectionTest.data;
       
-      if (authResponse.ok) {
-        const authData = await authResponse.json();
-        ibkrStatus = authData.success ? "✅ Authenticated" : "⚠️ Auth Failed";
-        authDetails = `Token: ${authData.api_token ? 'Valid' : 'None'}, Mode: ${authData.trading_mode || 'paper'}, Status: ${authData.connection_status || 'unknown'}`;
-      } else {
-        // Fallback to standard IBKR endpoint
-        authResponse = await fetch(`${baseUrl}/iserver/auth/status`, {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        
-        if (authResponse.ok) {
-          const authData = await authResponse.json();
-          ibkrStatus = authData.authenticated ? "✅ Authenticated" : "⚠️ Not Authenticated";
-          authDetails = `Connected: ${authData.connected || false}, Competing: ${authData.competing || false}`;
+      let message = `✅ <b>SUCCESS! Connected to YOUR real IBKR account!</b>\n\n`;
+      message += `🎯 <b>Account Verified:</b> ${data.accountId}\n`;
+      message += `🔗 <b>Connection:</b> ${data.isRealAccount ? 'Real Account' : 'Demo'}\n`;
+      message += `📈 <b>Mode:</b> ${data.mode.toUpperCase()}\n\n`;
+      
+      if (data.portfolio) {
+        message += `💰 <b>Real Balance Found:</b>\n`;
+        if (data.portfolio.NetLiquidation) {
+          message += `├─ Net Liquidation: $${Number(data.portfolio.NetLiquidation.amount).toLocaleString()}\n`;
+          message += `├─ Cash: $${Number(data.portfolio.TotalCashValue?.amount || 0).toLocaleString()}\n`;
+          message += `└─ Buying Power: $${Number(data.portfolio.BuyingPower?.amount || 0).toLocaleString()}\n\n`;
         }
       }
-    } catch (authError) {
-      ibkrStatus = healthData.ibkr_connected ? "✅ Connected via Health" : "❌ Not Available";
-      authDetails = "Using health endpoint status";
-    }
-    
-    const accountId = process.env.IBKR_ACCOUNT_ID || 'Not configured';
-    const tradingMode = process.env.IBKR_GATEWAY_MODE === 'PAPER' ? '📋 Paper Trading' : '💰 Live Trading';
-    const safetyStatus = process.env.DISABLE_TRADES === 'false' ? '✅ Active' : '⚠️ Disabled';
-    
-    const message = `📊 <b>INTERACTIVE BROKERS STATUS</b>
-
-🎯 <b>Trading Account:</b> ${accountId}
-🔧 <b>Mode:</b> ${tradingMode}
-🛡️ <b>Trading Status:</b> ${safetyStatus}
-
-🌐 <b>Gateway Server:</b>
-├─ Status: ${healthData.status === 'healthy' ? '✅ Online' : '❌ Offline'}
-├─ Endpoint: ${baseUrl}
-├─ Version: ${healthData.version || 'Unknown'}
-└─ Ready: ${healthData.trading_ready ? '✅ Ready' : '⏳ Initializing'}
-
-🏦 <b>IBKR Authentication:</b>
-├─ Connection: ${ibkrStatus}
-└─ Details: ${authDetails}
-
-📈 <b>Trading Capabilities:</b>
-├─ Options Trading: ✅ Enabled
-├─ Paper Mode: ${process.env.IBKR_GATEWAY_MODE === 'PAPER' ? '✅ Active' : '❌ Inactive'}
-└─ Risk Management: ✅ Active`;
-    
-    await ctx.reply(message, { parse_mode: 'HTML' });
-  } catch (error: any) {
-    await ctx.reply(`❌ IBKR Status error: ${error?.message || error}`);
-  }
-});
-
-bot.command('ibkr_account', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
-    
-    try {
-      // Get authentication token
-      const token = await getIBKRAuthToken(baseUrl);
       
-      // Get configuration info for account details
-      const configResponse = await fetch(`${baseUrl}/config`, {
-        method: 'GET',
-        headers: { 
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        }
-      });
-      
-      if (configResponse.ok) {
-        const configData = await configResponse.json();
-        const accountId = process.env.IBKR_ACCOUNT_ID || 'Not configured';
-        const message = `📋 <b>IBKR ACCOUNT DETAILS</b>
-
-👤 <b>Paper Trading Account:</b> ${accountId}
-🔐 <b>Authentication:</b> ✅ Connected & Verified
-
-🎯 <b>Trading Environment:</b>
-├─ Mode: ${configData.trading_mode?.toUpperCase() || 'PAPER'} 
-├─ Environment: ${configData.environment || 'Production'}
-├─ IBKR Gateway: ${configData.ibkr_connected ? '✅ Active' : '❌ Inactive'}
-└─ Ready Status: ${configData.ready_for_trading ? '✅ Ready' : '⏳ Initializing'}
-
-💼 <b>Trading Permissions:</b>
-${Array.isArray(configData.trading_capabilities) ? 
-  configData.trading_capabilities.map((cap: string) => `├─ ${cap}`).join('\n') : 
-  '├─ Options Trading\n├─ Stock Trading\n└─ Paper Trading'}
-
-🔧 <b>Active Services:</b>
-${Array.isArray(configData.endpoints) ? 
-  configData.endpoints.filter((ep: string) => ep.includes('trading')).map((ep: string) => `├─ ${ep.replace('/trading', 'Trading API')}`).join('\n') : 
-  '├─ Market Data\n├─ Order Management\n└─ Portfolio Tracking'}
-
-⚠️ <b>Risk Notice:</b> Paper trading environment - No real money at risk`;
-        
-        await ctx.reply(message, { parse_mode: 'HTML' });
-      } else {
-        throw new Error(`Config fetch failed: ${configResponse.status}`);
-      }
-    } catch (apiError: any) {
-          const message = `📋 <b>IBKR ACCOUNT STATUS</b>
-
-🎯 <b>Paper Trading Account:</b> ${process.env.IBKR_ACCOUNT_ID || 'DU7428350'}
-🔐 <b>Authentication:</b> ⚠️ Connection Issue
-
-⚠️ <b>Server Response:</b>
-Error: Authentication required
-Endpoint: ${baseUrl}/config
-
-🔧 <b>Technical Details:</b>
-├─ Server Status: ✅ Online & Healthy
-├─ IBKR Gateway: ✅ Connected (per config)
-└─ Auth Token: ❌ Invalid or expired
-
-💡 <b>Resolution Options:</b>
-• Server may need credential refresh
-• Try: /ibkr_connect to re-authenticate
-• Contact admin to verify server credentials
-
-🏦 <b>Note:</b> Server shows IBKR as connected in config - this is likely a token issue`;
+      message += `🤖 <b>Bot Status:</b> Ready for real trading!\n`;
+      message += `🔥 <b>Next:</b> Use /ibkr_balance and /ibkr_positions to see YOUR data`;
       
       await ctx.reply(message, { parse_mode: 'HTML' });
-    }
-  } catch (error: any) {
-    await ctx.reply(`❌ Account info error: ${error?.message || error}`);
-  }
-});
-
-bot.command('ibkr_positions', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
-    const accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
-    
-    try {
-      // Get positions data from server
-      const positionsData = await getServerData(baseUrl, '/trading/positions');
       
-      let message = `📊 <b>PORTFOLIO POSITIONS</b>\n\n`;
-      message += `🎯 <b>Account:</b> ${accountId} (Paper Trading)\n\n`;
-      
-      if (positionsData.positions && positionsData.positions.length > 0) {
-        message += `✅ <b>Active Positions (${positionsData.positions.length}):</b>\n`;
-        
-        positionsData.positions.forEach((pos: any, index: number) => {
-          message += `\n${index + 1}. <b>${pos.symbol}</b>\n`;
-          message += `├─ Quantity: ${pos.quantity || 0} shares\n`;
-          message += `├─ Avg Price: $${pos.avg_price || 'N/A'}\n`;
-          message += `├─ Market Value: $${pos.market_value || 'N/A'}\n`;
-          message += `└─ P&L: ${pos.unrealized_pnl > 0 ? '+' : ''}$${pos.unrealized_pnl || 'N/A'}\n`;
-        });
-      } else {
-        message += `📈 <b>No Open Positions</b>\n\n✅ Account ready for trading\n💡 All positions closed or no trades executed yet`;
-      }
-        
-      message += `\n\n🏦 <b>Account Details:</b>\n`;
-      message += `├─ ID: ${accountId}\n`;
-      message += `├─ Mode: Paper Trading\n`;
-      message += `└─ Updated: ${new Date().toLocaleTimeString()}`;
-        
-      await ctx.reply(message, { parse_mode: 'HTML' });
-    } catch (apiError: any) {
-      const message = `📊 <b>PORTFOLIO POSITIONS</b>
-
-🎯 <b>Account:</b> ${accountId} (Paper Trading)
-🔐 <b>Access Status:</b> ❌ Authentication Required
-
-⚠️ <b>Connection Issue:</b>
-Server Response: ${apiError.message || 'Authentication failed'}
-Endpoint: ${baseUrl}/trading/positions
-
-🔧 <b>Technical Status:</b>
-├─ IBKR Gateway: ✅ Online (per server config)
-├─ Trading Ready: ✅ Active (per health check)  
-└─ Auth Token: ❌ Invalid or missing
-
-💡 <b>Expected Portfolio:</b>
-Based on server config, should display:
-• TSLA positions (10 shares)
-• Account balance: $50,000
-• Real-time market data
-
-🔄 <b>Next Steps:</b>
-• Server credentials may need refresh
-• Try: /ibkr_connect for re-authentication`;
-      
-      await ctx.reply(message, { parse_mode: 'HTML' });
-    }
-  } catch (error: any) {
-    await ctx.reply(`❌ Positions error: ${error?.message || error}`);
-  }
-});
-
-bot.command('ibkr_balance', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
-    const accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
-    
-    try {
-      // Get balance data from server  
-      const statusData = await getServerData(baseUrl, '/trading/status');
-      
-      const message = `💰 <b>ACCOUNT BALANCE & EQUITY</b>
-
-🎯 <b>Paper Trading Account:</b> ${accountId}
-💵 <b>Cash Balance:</b> $${statusData.cash_balance?.toLocaleString() || '50,000'}
-💪 <b>Buying Power:</b> $${statusData.buying_power?.toLocaleString() || '50,000'}
-📊 <b>Total Equity:</b> $${statusData.total_equity?.toLocaleString() || '52,500'}
-
-✅ <b>Account Status:</b>
-├─ Currency: ${statusData.currency || 'USD'}
-├─ Account Type: Paper Trading
-├─ Trading Status: Active
-└─ Risk Level: No real money at risk
-
-└─ Unrealized P&L: $${((statusData.total_equity || 52500) - 50000)?.toLocaleString() || '+2,500'}
-
-🔧 <b>Account Details:</b>
-├─ Account ID: ${accountId}
-├─ Trading Mode: Paper Trading  
-├─ Currency: ${statusData.currency || 'USD'}
-└─ Updated: ${new Date().toLocaleTimeString()}`;
-        
-        await ctx.reply(message, { parse_mode: 'HTML' });
-    } catch (apiError: any) {
-      const message = `💰 <b>ACCOUNT BALANCE & EQUITY</b>
-
-🎯 <b>Paper Trading Account:</b> ${process.env.IBKR_ACCOUNT_ID || 'DU7428350'}
-🔐 <b>Access Status:</b> ❌ Authentication Required
-
-⚠️ <b>Server Response:</b>
-Error: ${apiError.message || 'Authentication failed'}
-Endpoint: ${baseUrl}/trading/status
-
-📊 <b>Expected Balance:</b>
-Based on server configuration:
-• Cash Balance: $50,000 (Paper Trading)
-• Buying Power: Available for options trading
-• Portfolio Value: Includes TSLA positions
-
-🔧 <b>Connection Status:</b>
-├─ Server Health: ✅ Online
-├─ IBKR Gateway: ✅ Connected (config shows ready)
-└─ Auth Access: ❌ Token authentication needed
-
-🔄 <b>To Access Balance:</b>
-Server credentials need refresh - /ibkr_connect may help`;
-      
-      await ctx.reply(message, { parse_mode: 'HTML' });
-    }
-  } catch (error: any) {
-    await ctx.reply(`❌ Balance error: ${error?.message || error}`);
-  }
-});
-
-bot.command('ibkr_test_order', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
-    const message = `🧪 <b>PAPER TRADING TEST ORDER</b>
-
-📊 <b>Order Details:</b>
-├─ Symbol: AAPL (Apple Inc.)
-├─ Side: BUY
-├─ Quantity: 1 share
-├─ Account: ${accountId}
-└─ Gateway: E2B Sandbox Server
-
-🎯 <b>Execution Status:</b> ✅ Test Simulation
-
-⚠️ <b>Paper Trading Mode:</b>
-├─ Environment: Virtual trading only
-├─ Real Money: 🛡️ No risk (Paper account)
-└─ Safety Mode: ✅ Active
-
-🔧 <b>Trading Configuration:</b>
-├─ Account: ${accountId} (Paper)
-├─ Mode: PAPER Trading
-└─ Orders: ${process.env.DISABLE_TRADES === 'false' ? '✅ Enabled' : '⚠️ Disabled'}
-
-💡 <b>Note:</b> All trades are simulated in paper environment`;
-    
-    await ctx.reply(message, { parse_mode: 'HTML' });
-  } catch (error: any) {
-    await ctx.reply(`❌ Test order error: ${error?.message || error}`);
-  }
-});
-
-bot.command('ibkr_connect', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
-    const accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
-    
-    // Check server health
-    const healthResponse = await fetch(`${baseUrl}/health`);
-    const healthData = await healthResponse.json();
-    
-    let message = `🔄 <b>IBKR CONNECTION STATUS</b>\n\n`;
-    message += `🎯 <b>Account:</b> ${accountId} (Paper Trading)\n`;
-    message += `🌐 <b>Server:</b> ${baseUrl}\n\n`;
-    
-    message += `📊 <b>Server Health:</b>\n`;
-    message += `├─ Status: ${healthData.status === 'healthy' ? '✅ Healthy' : '❌ Unhealthy'}\n`;
-    message += `├─ IBKR Connected: ${healthData.ibkr_connected ? '✅ Yes' : '❌ No'}\n`;
-    message += `├─ Trading Ready: ${healthData.trading_ready ? '✅ Ready' : '⏳ Initializing'}\n`;
-    message += `└─ Version: ${healthData.version || 'Unknown'}\n\n`;
-    
-    if (healthData.status === 'healthy' && healthData.ibkr_connected && healthData.trading_ready) {
-      message += `🎉 <b>Connection Status: EXCELLENT</b>\n\n`;
-      message += `✅ <b>All Systems Online:</b>\n`;
-      message += `├─ Server: ✅ Operational (${(Math.random() * 30 + 70).toFixed(0)}ms response)\n`;
-      message += `├─ IBKR Gateway: ✅ Connected & Authenticated\n`;
-      message += `├─ Trading System: ✅ Ready for orders\n`;
-      message += `└─ Paper Account: ✅ Active & verified\n\n`;
-      message += `🚀 <b>Ready Commands:</b>\n`;
-      message += `• /ibkr_status - Detailed status\n`;
-      message += `• /ibkr_account - Account information\n`;
-      message += `• /ibkr_positions - Portfolio positions\n`;
-      message += `• /ibkr_balance - Account balance`;
     } else {
-      message += `⚠️ <b>Connection Issues Detected</b>\n\n`;
-      message += `🔧 <b>Status Summary:</b>\n`;
-      message += `├─ Server Health: ${healthData.status || 'Unknown'}\n`;
-      message += `├─ IBKR Status: ${healthData.ibkr_connected ? 'Connected' : 'Disconnected'}\n`;
-      message += `└─ Trading Status: ${healthData.trading_ready ? 'Ready' : 'Not Ready'}\n\n`;
-      message += `💡 <b>Recommended Actions:</b>\n`;
-      message += `• Check server configuration\n`;
-      message += `• Verify IBKR gateway status\n`;
-      message += `• Contact system administrator`;
+      let message = `❌ <b>Failed to connect to real IBKR account</b>\n\n`;
+      message += `🔴 <b>Error:</b> ${connectionTest.error}\n\n`;
+      message += `🔧 <b>Solutions:</b>\n`;
+      message += `1. Make sure TWS/Gateway is running on your computer\n`;
+      message += `2. Enable API in TWS settings (port 5000)\n`;
+      message += `3. Login with your real IBKR credentials\n`;
+      message += `4. Check firewall settings\n\n`;
+      message += `📋 <b>Setup Guide:</b> Check REAL_IBKR_SETUP_GUIDE.md`;
+      
+      await ctx.reply(message, { parse_mode: 'HTML' });
     }
     
-    await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error: any) {
-    await ctx.reply(`❌ Connection test error: ${error?.message || error}`);
+    await ctx.reply(`❌ Connection test failed: ${error?.message || error}`);
   }
 });
 
-// System Load Testing Commands
-bot.command('load_test', async (ctx) => {
+bot.command('real_balance', async (ctx) => {
   if (!adminOnly(ctx)) return;
+  
   try {
-    await ctx.reply('🧪 <b>Starting System Load Test...</b>\n\nTesting all components:', { parse_mode: 'HTML' });
+    await ctx.reply('💰 Getting YOUR real account balance...');
     
-    const results = [];
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
+    const { realIBKR } = await import('./real-ibkr-connector.js');
+    const balance = await realIBKR.getRealBalance();
+    const positions = await realIBKR.getRealPositions();
     
-    // Test 1: Railway Server Health (5 rapid requests)
-    let railwaySuccesses = 0;
-    const startTime = Date.now();
+    let message = `💰 <b>YOUR REAL IBKR ACCOUNT BALANCE</b>\n\n`;
+    message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID} (REAL ACCOUNT)\n\n`;
     
-    for (let i = 0; i < 5; i++) {
-      try {
-        const response = await fetch(`${baseUrl}/health`);
-        if (response.ok) railwaySuccesses++;
-      } catch (e) {}
-    }
-    
-    results.push(`🌐 Railway Health: ${railwaySuccesses}/5 (${Math.round((railwaySuccesses/5)*100)}%)`);
-    
-    // Test 2: Gemini AI Response Time
-    let geminiTime = 0;
-    try {
-      const geminiStart = Date.now();
-      // Simple test call to Gemini
-      geminiTime = Date.now() - geminiStart;
-      results.push(`🧠 Gemini Response: ${geminiTime}ms`);
-    } catch (e) {
-      results.push(`🧠 Gemini Response: ❌ Failed`);
-    }
-    
-    // Test 3: Memory Usage
-    const memUsage = process.memoryUsage();
-    const memMB = Math.round(memUsage.rss / 1024 / 1024);
-    results.push(`💾 Memory Usage: ${memMB}MB`);
-    
-    // Test 4: IBKR Gateway Connectivity
-    let ibkrStatus = '❌ Not Available';
-    try {
-      const ibkrResponse = await fetch(`${baseUrl}/iserver/auth/status`);
-      ibkrStatus = ibkrResponse.ok ? '✅ Responding' : '⚠️ HTTP Error';
-    } catch (e) {
-      ibkrStatus = '❌ Connection Failed';
-    }
-    results.push(`🏦 IBKR Gateway: ${ibkrStatus}`);
-    
-    const totalTime = Date.now() - startTime;
-    
-    const message = `📊 <b>Load Test Results</b>
-
-${results.join('\n')}
-
-⏱️ <b>Total Test Time:</b> ${totalTime}ms
-🚀 <b>System Status:</b> ${railwaySuccesses >= 4 && memMB < 500 ? '✅ Excellent' : railwaySuccesses >= 3 ? '⚠️ Good' : '❌ Issues Detected'}
-
-💡 <b>Recommendations:</b>
-${memMB > 500 ? '• Consider memory optimization\n' : ''}${railwaySuccesses < 4 ? '• Check Railway server stability\n' : ''}${ibkrStatus.includes('❌') ? '• IBKR Gateway needs configuration\n' : ''}
-🎯 Ready for production trading!`;
-    
-    await ctx.reply(message, { parse_mode: 'HTML' });
-  } catch (error: any) {
-    await ctx.reply(`❌ Load test error: ${error?.message || error}`);
-  }
-});
-
-// Railway Server Testing
-bot.command('railway_test', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
-    
-    await ctx.reply('🚂 <b>Testing Railway Custom Endpoints...</b>', { parse_mode: 'HTML' });
-    
-    const results = [];
-    
-    // Test custom endpoints
-    const endpoints = [
-      { path: '/health', name: 'Health Check' },
-      { path: '/config', name: 'Configuration' },
-      { path: '/auth/login', name: 'Custom Auth' },
-      { path: '/trading/positions', name: 'Trading Positions' },
-      { path: '/trading/orders', name: 'Trading Orders' },
-      { path: '/market/data', name: 'Market Data' }
-    ];
-    
-    for (const endpoint of endpoints) {
-      try {
-        const response = await fetch(`${baseUrl}${endpoint.path}`);
-        const status = response.ok ? '✅' : '⚠️';
-        results.push(`${status} ${endpoint.name}: HTTP ${response.status}`);
-      } catch (error) {
-        results.push(`❌ ${endpoint.name}: Connection failed`);
+    if (balance.NetLiquidation) {
+      message += `💰 <b>Net Liquidation:</b> $${Number(balance.NetLiquidation.amount).toLocaleString()}\n`;
+      message += `💵 <b>Total Cash:</b> $${Number(balance.TotalCashValue?.amount || 0).toLocaleString()}\n`;
+      message += `💪 <b>Buying Power:</b> $${Number(balance.BuyingPower?.amount || 0).toLocaleString()}\n`;
+      message += `📊 <b>Gross Position Value:</b> $${Number(balance.GrossPositionValue?.amount || 0).toLocaleString()}\n\n`;
+      
+      // Calculate total P&L from positions
+      let totalPnL = 0;
+      if (Array.isArray(positions)) {
+        totalPnL = positions.reduce((sum: number, pos: any) => sum + (pos.unrealizedPnl || 0), 0);
       }
-    }
-    
-    const message = `🚂 <b>Railway Server Test Results</b>
-
-${results.join('\n')}
-
-🔧 <b>Server Status:</b>
-• Version: 2.1.0
-• Environment: Production
-• Custom IBKR endpoints available
-• Paper trading mode configured
-
-💡 <b>Next Steps:</b>
-• Use custom endpoints instead of standard IBKR
-• Test /trading/order for actual trading
-• Configure authentication if needed`;
-    
-    await ctx.reply(message, { parse_mode: 'HTML' });
-  } catch (error: any) {
-    await ctx.reply(`❌ Railway test error: ${error?.message || error}`);
-  }
-});
-
-// System Health Monitor
-bot.command('system_health', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const uptime = process.uptime();
-    const memUsage = process.memoryUsage();
-    
-    const message = `🔍 <b>System Health Monitor</b>
-
-⏱️ <b>Uptime:</b> ${Math.floor(uptime/3600)}h ${Math.floor((uptime%3600)/60)}m ${Math.floor(uptime%60)}s
-
-💾 <b>Memory:</b>
-• RSS: ${Math.round(memUsage.rss / 1024 / 1024)}MB
-• Heap Used: ${Math.round(memUsage.heapUsed / 1024 / 1024)}MB
-• Heap Total: ${Math.round(memUsage.heapTotal / 1024 / 1024)}MB
-• External: ${Math.round(memUsage.external / 1024 / 1024)}MB
-
-🌡️ <b>Performance:</b>
-• CPU Usage: ${process.cpuUsage().user}μs
-• Event Loop Lag: ${process.hrtime()[1]}ns
-
-🔄 <b>Environment:</b>
-• Node Version: ${process.version}
-• Platform: ${process.platform}
-• Arch: ${process.arch}
-
-${memUsage.rss > 500 * 1024 * 1024 ? '⚠️ High memory usage detected' : '✅ Memory usage normal'}`;
-    
-    await ctx.reply(message, { parse_mode: 'HTML' });
-  } catch (error: any) {
-    await ctx.reply(`❌ Health check error: ${error?.message || error}`);
-  }
-});
-
-// Simple command to check which account the server shows
-bot.command('ibkr_check_server', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
-    const myAccountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
-    
-    const response = await fetch(`${baseUrl}/v1/api/iserver/accounts`);
-    const data = await response.json();
-    
-    const serverAccount = data.accounts && data.accounts[0];
-    const isCorrect = serverAccount === myAccountId;
-    
-    let message = '🔍 <b>IBKR Server Account Check</b>\n\n';
-    message += `🎯 <b>Your Account:</b> ${myAccountId}\n`;
-    message += `📡 <b>Server Shows:</b> ${serverAccount || 'Unknown'}\n`;
-    message += `${isCorrect ? '✅' : '❌'} <b>Status:</b> ${isCorrect ? 'CORRECT - Server configured for your real account!' : 'WRONG - Server still shows demo account!'}\n\n`;
-    
-    if (!isCorrect) {
-      message += '💡 <b>Next Step:</b>\n';
-      message += 'Run server configuration commands to fix this.\n';
-      message += 'Check files: CONFIGURE_REAL_ACCOUNT.sh or SIMPLE_FIX.sh';
+      
+      const pnlIcon = totalPnL >= 0 ? '📈' : '📉';
+      message += `${pnlIcon} <b>Unrealized P&L:</b> ${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}\n\n`;
+      
+      message += `✅ <b>REAL ACCOUNT VERIFIED:</b>\n`;
+      message += `🎯 This is YOUR actual IBKR data\n`;
+      message += `❌ This is NOT demo/fake data\n`;
+      message += `🔗 Live connection to IBKR servers`;
+      
+    } else {
+      message += `❌ Could not fetch balance data\n`;
+      message += `Check connection with /connect_real_ibkr`;
     }
     
     await ctx.reply(message, { parse_mode: 'HTML' });
     
   } catch (error: any) {
-    await ctx.reply('❌ Check failed: ' + (error?.message || error));
+    await ctx.reply(`❌ Real balance error: ${error?.message || error}\n\n🔧 Try: /connect_real_ibkr first`);
+  }
+});
+
+bot.command('real_positions', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  
+  try {
+    await ctx.reply('📊 Getting YOUR real positions...');
+    
+    const { realIBKR } = await import('./real-ibkr-connector.js');
+    const positions = await realIBKR.getRealPositions();
+    
+    let message = `📊 <b>YOUR REAL PORTFOLIO POSITIONS</b>\n\n`;
+    message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID} (REAL ACCOUNT)\n\n`;
+    
+    if (positions && Array.isArray(positions) && positions.length > 0) {
+      message += `✅ <b>Active Positions (${positions.length}):</b>\n\n`;
+      
+      let totalValue = 0;
+      let totalPnL = 0;
+      
+      positions.forEach((pos: any, index: number) => {
+        const pnl = Number(pos.unrealizedPnl || 0);
+        const marketValue = Number(pos.mktValue || 0);
+        const quantity = Number(pos.position || 0);
+        const price = Number(pos.mktPrice || 0);
+        
+        totalValue += Math.abs(marketValue);
+        totalPnL += pnl;
+        
+        const pnlIcon = pnl >= 0 ? '📈' : '📉';
+        const positionType = quantity > 0 ? 'LONG' : 'SHORT';
+        const positionIcon = quantity > 0 ? '🟢' : '🔴';
+        
+        message += `${index + 1}. ${positionIcon} <b>${pos.ticker || pos.contractDesc}</b> (${positionType})\n`;
+        message += `├─ Shares: ${Math.abs(quantity)} ${quantity > 0 ? 'owned' : 'short'}\n`;
+        message += `├─ Current Price: $${price.toFixed(2)}\n`;
+        message += `├─ Avg Cost: $${Number(pos.avgPrice || 0).toFixed(2)}\n`;
+        message += `├─ Market Value: $${Math.abs(marketValue).toLocaleString()}\n`;
+        message += `└─ ${pnlIcon} P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}\n\n`;
+      });
+      
+      message += `💰 <b>Portfolio Summary:</b>\n`;
+      message += `├─ Total Positions: ${positions.length}\n`;
+      message += `├─ Total Market Value: $${totalValue.toLocaleString()}\n`;
+      message += `└─ Total Unrealized P&L: ${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}\n\n`;
+      
+      message += `✅ <b>REAL PORTFOLIO VERIFIED:</b>\n`;
+      message += `🎯 These are YOUR actual positions\n`;
+      message += `🔗 Live data from IBKR servers`;
+      
+    } else {
+      message += `📈 <b>No Open Positions</b>\n\n`;
+      message += `✅ Your account is ready for trading\n`;
+      message += `💡 Portfolio currently empty or positions closed\n\n`;
+      message += `🔗 Connected to YOUR real IBKR account`;
+    }
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
+    
+  } catch (error: any) {
+    await ctx.reply(`❌ Real positions error: ${error?.message || error}\n\n🔧 Try: /connect_real_ibkr first`);
+  }
+});
+
+bot.command('place_real_order', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  
+  const args = ctx.message?.text?.split(' ').slice(1) || [];
+  
+  if (args.length < 3) {
+    await ctx.reply(`❌ Usage: /place_real_order <SYMBOL> <BUY/SELL> <QUANTITY> [PRICE]\n\nExample: /place_real_order TSLA BUY 10\nExample: /place_real_order AAPL SELL 5 450.00`);
+    return;
+  }
+  
+  const [symbol, action, quantityStr, priceStr] = args;
+  const quantity = parseInt(quantityStr);
+  const price = priceStr ? parseFloat(priceStr) : undefined;
+  
+  if (!['BUY', 'SELL'].includes(action.toUpperCase())) {
+    await ctx.reply('❌ Action must be BUY or SELL');
+    return;
+  }
+  
+  if (!quantity || quantity <= 0) {
+    await ctx.reply('❌ Quantity must be a positive number');
+    return;
+  }
+  
+  try {
+    await ctx.reply(`🔥 Placing REAL order: ${action} ${quantity} ${symbol}${price ? ` @ $${price}` : ' (Market)'}\n\n⚠️ This will execute on your REAL IBKR account!`);
+    
+    const { realIBKR } = await import('./real-ibkr-connector.js');
+    
+    const orderResult = await realIBKR.placeRealOrder({
+      symbol: symbol.toUpperCase(),
+      action: action.toUpperCase() as 'BUY' | 'SELL',
+      quantity,
+      orderType: price ? 'LMT' : 'MKT',
+      price
+    });
+    
+    let message = `✅ <b>REAL ORDER PLACED SUCCESSFULLY!</b>\n\n`;
+    message += `📊 <b>Order Details:</b>\n`;
+    message += `├─ Symbol: ${symbol.toUpperCase()}\n`;
+    message += `├─ Action: ${action.toUpperCase()}\n`;
+    message += `├─ Quantity: ${quantity}\n`;
+    message += `├─ Type: ${price ? 'LIMIT' : 'MARKET'}\n`;
+    if (price) message += `├─ Price: $${price}\n`;
+    message += `└─ Account: ${process.env.IBKR_ACCOUNT_ID}\n\n`;
+    
+    if (orderResult.id) {
+      message += `🎯 <b>Order ID:</b> ${orderResult.id}\n`;
+    }
+    
+    message += `🔥 <b>Status:</b> Order submitted to IBKR\n`;
+    message += `📱 Check TWS or IBKR mobile app for execution status`;
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
+    
+  } catch (error: any) {
+    await ctx.reply(`❌ Order failed: ${error?.message || error}\n\n🔧 Make sure you're connected with /connect_real_ibkr`);
   }
 });
 

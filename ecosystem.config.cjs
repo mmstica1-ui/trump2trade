@@ -16,25 +16,15 @@ module.exports = {
       TELEGRAM_CHAT_ID: '540751833',
       TELEGRAM_GROUP_CHAT_ID: '',
       // Gemini (Google)
-      GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
+      GOOGLE_API_KEY: 'DEVELOPMENT_MOCK_MODE',
       GEMINI_MODEL: 'gemini-1.5-flash',
       // SYNOPTIC
       SYNOPTIC_API_KEY: '1f082681-21a2-6b80-bf48-2c16d80faa8e',
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
-      // IBKR Trading Configuration - New Working Gateway  
-      IBKR_BASE_URL: 'https://8080-ibu98pd4j6524ljwfdvht.e2b.dev',
-      IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
-      TWS_USERNAME: 'ilyuwc476',
-      TWS_PASSWORD: 'trump123!',
-      IBKR_ORDER_DEFAULT_QTY: '1',
-      IBKR_ORDER_TIF: 'DAY',
-      IBKR_OUTSIDE_RTH: 'false',
-      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
-      IBKR_GATEWAY_MODE: 'PAPER',  // Paper Trading Mode
-      // Safety - REAL TRADING ENABLED
-      DISABLE_TRADES: 'false',
+      // Safety
+      DISABLE_TRADES: 'true',
       OPS_CHECK_EVERY_MS: '60000',
       // Poller
       POLL_ENABLED: 'false',
@@ -49,25 +39,15 @@ module.exports = {
       TELEGRAM_CHAT_ID: '540751833',
       TELEGRAM_GROUP_CHAT_ID: '',
       // Gemini (Google)
-      GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
+      GOOGLE_API_KEY: 'DEVELOPMENT_MOCK_MODE',
       GEMINI_MODEL: 'gemini-1.5-flash',
       // SYNOPTIC
       SYNOPTIC_API_KEY: '1f082681-21a2-6b80-bf48-2c16d80faa8e',
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
-      // IBKR Trading Configuration - New Working Gateway  
-      IBKR_BASE_URL: 'https://8080-ibu98pd4j6524ljwfdvht.e2b.dev',
-      IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
-      TWS_USERNAME: 'ilyuwc476',
-      TWS_PASSWORD: 'trump123!',
-      IBKR_ORDER_DEFAULT_QTY: '1',
-      IBKR_ORDER_TIF: 'DAY',
-      IBKR_OUTSIDE_RTH: 'false',
-      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
-      IBKR_GATEWAY_MODE: 'PAPER',  // Paper Trading Mode
-      // Safety - REAL TRADING ENABLED
-      DISABLE_TRADES: 'false',
+      // Safety
+      DISABLE_TRADES: 'true',
       OPS_CHECK_EVERY_MS: '60000',
       // Poller
       POLL_ENABLED: 'false',
