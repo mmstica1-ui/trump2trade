@@ -21,7 +21,7 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   }
   
   // Check IBKR Gateway mode
-  if (process.env.IBKR_GATEWAY_MODE === 'SIMULATION' || !await isIbkrGatewayRunning()) {
+  if (process.env.IBKR_GATEWAY_MODE === 'SIMULATION' || process.env.IBKR_GATEWAY_MODE === 'MANUAL' || !await isIbkrGatewayRunning()) {
     return simulateIbkrTrade(p);
   }
   
@@ -154,7 +154,10 @@ function simulateIbkrTrade(p: InlineTradePayload): string {
   const mockExpiry = getNextFriday();
   const mockOrderId = `SIM${Date.now()}`;
   
-  return `🧪 <b>RAILWAY SIMULATION MODE</b>
+  const mode = process.env.IBKR_GATEWAY_MODE;
+  const modeText = mode === 'MANUAL' ? 'MANUAL TRADING MODE' : 'RAILWAY SIMULATION MODE';
+  
+  return `💼 <b>${modeText}</b>
   
 ✅ ${side} ${type} ${p.t} ${mockExpiry} $${mockStrike} x${qty}
 📊 Estimated Price: $${mockPrice.toFixed(2)}
@@ -162,16 +165,25 @@ function simulateIbkrTrade(p: InlineTradePayload): string {
 📅 Expiry: ${mockExpiry}
 🆔 Order ID: ${mockOrderId}
 
-🌐 <b>Railway Server Status:</b> ✅ Running
-🔧 <b>IBKR Gateway:</b> ❌ Not authenticated
+${mode === 'MANUAL' ? 
+`🎯 <b>Ready for Manual Execution!</b>
+👆 Click link below to execute this trade manually:
+🌐 <b>IBKR Trading Platform:</b>
+${process.env.MANUAL_TRADING_URL}
 
-⚠️ <b>Next Steps to Enable Real Trading:</b>
-• Configure IBKR credentials in Railway
-• Complete IBKR Gateway authentication
-• Test connection with paper trading
+📋 <b>Trade Details to Execute:</b>
+• Symbol: ${p.t}
+• Action: ${side} ${type}
+• Strike: $${mockStrike}
+• Expiry: ${mockExpiry}
+• Quantity: ${qty}` :
+`🌐 <b>Railway Server Status:</b> ✅ Running
+🔧 <b>IBKR Gateway:</b> ❌ Not configured
 
-💡 Manual Trading: ${process.env.MANUAL_TRADING_URL}
-🌐 Server Health: ${base}/health`;
+⚠️ <b>Railway server is status-only, not full IBKR Gateway</b>
+💡 Switch to Manual Trading for immediate functionality`}
+
+🔄 <b>Need Automation?</b> Set up dedicated IBKR Gateway server`;
 }
 
 function getNextFriday(): string {

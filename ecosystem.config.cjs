@@ -30,7 +30,7 @@ module.exports = {
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
       MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
-      IBKR_GATEWAY_MODE: 'REAL',  // Using Railway Gateway
+      IBKR_GATEWAY_MODE: 'MANUAL',  // Manual Trading Mode
       // Safety
       DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',
@@ -61,7 +61,7 @@ module.exports = {
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
       MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
-      IBKR_GATEWAY_MODE: 'REAL',  // Using Railway Gateway
+      IBKR_GATEWAY_MODE: 'MANUAL',  // Manual Trading Mode
       // Safety
       DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',
