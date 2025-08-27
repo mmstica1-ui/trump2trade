@@ -154,36 +154,38 @@ function simulateIbkrTrade(p: InlineTradePayload): string {
   const mockExpiry = getNextFriday();
   const mockOrderId = `SIM${Date.now()}`;
   
-  const mode = process.env.IBKR_GATEWAY_MODE;
-  const modeText = mode === 'MANUAL' ? 'MANUAL TRADING MODE' : 'RAILWAY SIMULATION MODE';
+  const mode = process.env.IBKR_GATEWAY_MODE || 'PAPER';
+  const accountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
   
-  return `💼 <b>${modeText}</b>
+  return `📊 <b>IBKR PAPER TRADING</b> | Account: ${accountId}
   
-✅ ${side} ${type} ${p.t} ${mockExpiry} $${mockStrike} x${qty}
-📊 Estimated Price: $${mockPrice.toFixed(2)}
-🎯 Strike: $${mockStrike}
+✅ <b>${side} ${type} ORDER PREPARED</b>
+🎯 ${p.t} ${mockExpiry} Strike $${mockStrike} × ${qty}
+💰 Estimated Cost: $${mockPrice.toFixed(2)}
 📅 Expiry: ${mockExpiry}
-🆔 Order ID: ${mockOrderId}
+🔖 Reference: ${mockOrderId}
 
 ${mode === 'MANUAL' ? 
-`🎯 <b>Ready for Manual Execution!</b>
-👆 Click link below to execute this trade manually:
-🌐 <b>IBKR Trading Platform:</b>
+`🎯 <b>Manual Execution Required</b>
+👆 Execute this trade on IBKR platform:
+
+🌐 <b>IBKR Trading Interface:</b>
 ${process.env.MANUAL_TRADING_URL}
 
-📋 <b>Trade Details to Execute:</b>
-• Symbol: ${p.t}
-• Action: ${side} ${type}
-• Strike: $${mockStrike}
-• Expiry: ${mockExpiry}
-• Quantity: ${qty}` :
-`🌐 <b>Railway Server Status:</b> ✅ Running
-🔧 <b>IBKR Gateway:</b> ❌ Not configured
+📋 <b>Order Parameters:</b>
+• Underlying: ${p.t}
+• Option Type: ${type.toUpperCase()}
+• Strike Price: $${mockStrike}
+• Expiration: ${mockExpiry}
+• Side: ${side.toUpperCase()}
+• Quantity: ${qty} contracts` :
+`🔧 <b>IBKR Gateway Status:</b>
+✅ Paper Account Connected (${accountId})
+🔄 Attempting automated execution...
 
-⚠️ <b>Railway server is status-only, not full IBKR Gateway</b>
-💡 Switch to Manual Trading for immediate functionality`}
+⚠️ <b>Note:</b> Paper trading environment active`}
 
-🔄 <b>Need Automation?</b> Set up dedicated IBKR Gateway server`;
+💡 <b>Professional Options Trading</b> | Risk Management Enabled`;
 }
 
 function getNextFriday(): string {

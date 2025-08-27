@@ -25,12 +25,14 @@ module.exports = {
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
       // IBKR Trading Configuration - New Working Gateway  
       IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
-      IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
+      IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
+      IBKR_USERNAME: 'moshe454test',
+      IBKR_PASSWORD: 'Moshe454!',
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
       MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
-      IBKR_GATEWAY_MODE: 'REAL',  // Real IBKR Gateway via Railway
+      IBKR_GATEWAY_MODE: 'PAPER',  // Paper Trading Mode
       // Safety - REAL TRADING ENABLED
       DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',
@@ -56,12 +58,14 @@ module.exports = {
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
       // IBKR Trading Configuration - New Working Gateway  
       IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
-      IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
+      IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
+      IBKR_USERNAME: 'moshe454test',
+      IBKR_PASSWORD: 'Moshe454!',
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
       MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/sso/Login?RL=1',
-      IBKR_GATEWAY_MODE: 'REAL',  // Real IBKR Gateway via Railway
+      IBKR_GATEWAY_MODE: 'PAPER',  // Paper Trading Mode
       // Safety - REAL TRADING ENABLED
       DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',

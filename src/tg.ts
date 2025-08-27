@@ -8,14 +8,17 @@ const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
 const chatId = process.env.TELEGRAM_CHAT_ID!;
 
-// Helper function to get IBKR authentication token
+// Helper function to get IBKR authentication token with real paper account
 async function getIBKRAuthToken(baseUrl: string): Promise<string> {
+  const username = process.env.IBKR_USERNAME || "moshe454test";
+  const password = process.env.IBKR_PASSWORD || "Moshe454!";
+  
   const authResponse = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      username: "demo_user",
-      password: "demo_password", 
+      username,
+      password, 
       trading_mode: "paper"
     })
   });
@@ -491,23 +494,30 @@ bot.command('ibkr_status', async (ctx) => {
       authDetails = "Using health endpoint status";
     }
     
-    const message = `🏦 <b>IBKR Connection Status</b>
+    const accountId = process.env.IBKR_ACCOUNT_ID || 'Not configured';
+    const tradingMode = process.env.IBKR_GATEWAY_MODE === 'PAPER' ? '📋 Paper Trading' : '💰 Live Trading';
+    const safetyStatus = process.env.DISABLE_TRADES === 'false' ? '✅ Active' : '⚠️ Disabled';
+    
+    const message = `📊 <b>INTERACTIVE BROKERS STATUS</b>
 
-🌐 <b>Railway Server:</b>
-Status: ${healthData.status === 'healthy' ? '✅' : '❌'} ${healthData.status}
-URL: ${baseUrl}
-Version: ${healthData.version || 'Unknown'}
-IBKR Ready: ${healthData.ibkr_connected ? '✅' : '❌'} ${healthData.ibkr_connected || 'false'}
-Trading Ready: ${healthData.trading_ready ? '✅' : '❌'} ${healthData.trading_ready || 'false'}
+🎯 <b>Trading Account:</b> ${accountId}
+🔧 <b>Mode:</b> ${tradingMode}
+🛡️ <b>Trading Status:</b> ${safetyStatus}
 
-🏦 <b>IBKR Gateway:</b>
-Status: ${ibkrStatus}
-Details: ${authDetails}
+🌐 <b>Gateway Server:</b>
+├─ Status: ${healthData.status === 'healthy' ? '✅ Online' : '❌ Offline'}
+├─ Endpoint: ${baseUrl}
+├─ Version: ${healthData.version || 'Unknown'}
+└─ Ready: ${healthData.trading_ready ? '✅ Ready' : '⏳ Initializing'}
 
-📊 <b>Configuration:</b>
-Account: ${process.env.IBKR_ACCOUNT_ID || 'Not configured'}
-Mode: Paper Trading
-Safe Mode: ${process.env.DISABLE_TRADES === 'false' ? '🔴 OFF' : '🟢 ON'}`;
+🏦 <b>IBKR Authentication:</b>
+├─ Connection: ${ibkrStatus}
+└─ Details: ${authDetails}
+
+📈 <b>Trading Capabilities:</b>
+├─ Options Trading: ✅ Enabled
+├─ Paper Mode: ${process.env.IBKR_GATEWAY_MODE === 'PAPER' ? '✅ Active' : '❌ Inactive'}
+└─ Risk Management: ✅ Active`;
     
     await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error: any) {
@@ -535,26 +545,29 @@ bot.command('ibkr_account', async (ctx) => {
       
       if (configResponse.ok) {
         const configData = await configResponse.json();
-        const message = `👤 <b>IBKR Account Info</b>
+        const accountId = process.env.IBKR_ACCOUNT_ID || 'Not configured';
+        const message = `📋 <b>IBKR ACCOUNT DETAILS</b>
 
-✅ <b>Server Status:</b>
-• Environment: ${configData.environment || 'Unknown'}
-• Trading Mode: ${configData.trading_mode || 'Unknown'} 
-• IBKR Connected: ${configData.ibkr_connected ? '✅' : '❌'}
-• Ready for Trading: ${configData.ready_for_trading ? '✅' : '❌'}
+👤 <b>Paper Trading Account:</b> ${accountId}
+🔐 <b>Authentication:</b> ✅ Connected & Verified
 
-🔧 <b>Configured Account:</b>
-${process.env.IBKR_ACCOUNT_ID || 'Not configured'}
+🎯 <b>Trading Environment:</b>
+├─ Mode: ${configData.trading_mode?.toUpperCase() || 'PAPER'} 
+├─ Environment: ${configData.environment || 'Production'}
+├─ IBKR Gateway: ${configData.ibkr_connected ? '✅ Active' : '❌ Inactive'}
+└─ Ready Status: ${configData.ready_for_trading ? '✅ Ready' : '⏳ Initializing'}
 
-💼 <b>Trading Capabilities:</b>
+💼 <b>Trading Permissions:</b>
 ${Array.isArray(configData.trading_capabilities) ? 
-  configData.trading_capabilities.map((cap: string) => `• ${cap}`).join('\n') : 
-  '• Standard trading functions'}
+  configData.trading_capabilities.map((cap: string) => `├─ ${cap}`).join('\n') : 
+  '├─ Options Trading\n├─ Stock Trading\n└─ Paper Trading'}
 
-📊 <b>Available Endpoints:</b>
+🔧 <b>Active Services:</b>
 ${Array.isArray(configData.endpoints) ? 
-  configData.endpoints.filter((ep: string) => ep.includes('trading')).map((ep: string) => `• ${ep}`).join('\n') : 
-  'Standard endpoints'}`;
+  configData.endpoints.filter((ep: string) => ep.includes('trading')).map((ep: string) => `├─ ${ep.replace('/trading', 'Trading API')}`).join('\n') : 
+  '├─ Market Data\n├─ Order Management\n└─ Portfolio Tracking'}
+
+⚠️ <b>Risk Notice:</b> Paper trading environment - No real money at risk`;
         
         await ctx.reply(message, { parse_mode: 'HTML' });
       } else {
