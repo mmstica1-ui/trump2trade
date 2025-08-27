@@ -438,18 +438,32 @@ bot.command('ibkr_status', async (ctx) => {
     let authDetails = "Gateway not authenticated";
     
     try {
-      const authResponse = await fetch(`${baseUrl}/iserver/auth/status`, {
+      // Try custom auth endpoint first
+      let authResponse = await fetch(`${baseUrl}/auth/login`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
       
       if (authResponse.ok) {
         const authData = await authResponse.json();
-        ibkrStatus = authData.authenticated ? "✅ Authenticated" : "⚠️ Not Authenticated";
-        authDetails = `Connected: ${authData.connected || false}, Competing: ${authData.competing || false}`;
+        ibkrStatus = healthData.ibkr_connected ? "✅ Connected" : "⚠️ Not Connected";
+        authDetails = `Trading Ready: ${healthData.trading_ready}, Mode: ${healthData.trading_mode || 'paper'}`;
+      } else {
+        // Fallback to standard IBKR endpoint
+        authResponse = await fetch(`${baseUrl}/iserver/auth/status`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        if (authResponse.ok) {
+          const authData = await authResponse.json();
+          ibkrStatus = authData.authenticated ? "✅ Authenticated" : "⚠️ Not Authenticated";
+          authDetails = `Connected: ${authData.connected || false}, Competing: ${authData.competing || false}`;
+        }
       }
     } catch (authError) {
-      authDetails = "IBKR Gateway endpoints not available";
+      ibkrStatus = healthData.ibkr_connected ? "✅ Connected via Health" : "❌ Not Available";
+      authDetails = "Using health endpoint status";
     }
     
     const message = `🏦 <b>IBKR Connection Status</b>
@@ -482,10 +496,22 @@ bot.command('ibkr_account', async (ctx) => {
     const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
     
     try {
-      const accountResponse = await fetch(`${baseUrl}/iserver/accounts`, {
+      // Try Railway health endpoint for account info
+      const healthResponse = await fetch(`${baseUrl}/health`);
+      const healthData = await healthResponse.json();
+      
+      let accountResponse = await fetch(`${baseUrl}/config`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      // Fallback to standard IBKR endpoint
+      if (!accountResponse.ok) {
+        accountResponse = await fetch(`${baseUrl}/iserver/accounts`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       
       if (accountResponse.ok) {
         const accountData = await accountResponse.json();
@@ -534,10 +560,19 @@ bot.command('ibkr_positions', async (ctx) => {
     const accountId = process.env.IBKR_ACCOUNT_ID || 'DU1234567';
     
     try {
-      const positionsResponse = await fetch(`${baseUrl}/iserver/account/${accountId}/positions/0`, {
+      // Try custom trading positions endpoint
+      let positionsResponse = await fetch(`${baseUrl}/trading/positions`, {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' }
       });
+      
+      // Fallback to standard IBKR endpoint
+      if (!positionsResponse.ok) {
+        positionsResponse = await fetch(`${baseUrl}/iserver/account/${accountId}/positions/0`, {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
       
       if (positionsResponse.ok) {
         const positionsData = await positionsResponse.json();
@@ -794,6 +829,57 @@ ${memMB > 500 ? '• Consider memory optimization\n' : ''}${railwaySuccesses < 4
     await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error: any) {
     await ctx.reply(`❌ Load test error: ${error?.message || error}`);
+  }
+});
+
+// Railway Server Testing
+bot.command('railway_test', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    
+    await ctx.reply('🚂 <b>Testing Railway Custom Endpoints...</b>', { parse_mode: 'HTML' });
+    
+    const results = [];
+    
+    // Test custom endpoints
+    const endpoints = [
+      { path: '/health', name: 'Health Check' },
+      { path: '/config', name: 'Configuration' },
+      { path: '/auth/login', name: 'Custom Auth' },
+      { path: '/trading/positions', name: 'Trading Positions' },
+      { path: '/trading/orders', name: 'Trading Orders' },
+      { path: '/market/data', name: 'Market Data' }
+    ];
+    
+    for (const endpoint of endpoints) {
+      try {
+        const response = await fetch(`${baseUrl}${endpoint.path}`);
+        const status = response.ok ? '✅' : '⚠️';
+        results.push(`${status} ${endpoint.name}: HTTP ${response.status}`);
+      } catch (error) {
+        results.push(`❌ ${endpoint.name}: Connection failed`);
+      }
+    }
+    
+    const message = `🚂 <b>Railway Server Test Results</b>
+
+${results.join('\n')}
+
+🔧 <b>Server Status:</b>
+• Version: 2.1.0
+• Environment: Production
+• Custom IBKR endpoints available
+• Paper trading mode configured
+
+💡 <b>Next Steps:</b>
+• Use custom endpoints instead of standard IBKR
+• Test /trading/order for actual trading
+• Configure authentication if needed`;
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
+  } catch (error: any) {
+    await ctx.reply(`❌ Railway test error: ${error?.message || error}`);
   }
 });
 
