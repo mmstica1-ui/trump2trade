@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trump2Trade - Smart Trading Alerts</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            color: #333;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status-bar {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+        }
+
+        .tabs {
+            display: flex;
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 5px;
+            margin-bottom: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 15px 20px;
+            cursor: pointer;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+            color: rgba(255,255,255,0.7);
+            font-weight: 500;
+        }
+
+        .tab.active {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .tab-content {
+            display: none;
+            background: rgba(255,255,255,0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .setting-group {
+            margin-bottom: 25px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #007bff;
+        }
+
+        .setting-group h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .form-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .form-group {
+            flex: 1;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #495057;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+        }
+
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #0056b3;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+        }
+
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🦅 Trump2Trade</h1>
+            <p>Smart Trading Alerts & Configuration System</p>
+        </div>
+
+        <div class="status-bar">
+            <div>
+                <strong>System Status:</strong>
+                <span id="system-status">✅ Connected - Railway Gateway</span>
+            </div>
+            <div>
+                <strong>Safe Mode:</strong>
+                <span id="safe-mode-status">🟢 Active</span>
+            </div>
+            <div>
+                <strong>IBKR Account:</strong>
+                <span id="account-status">Paper Trading</span>
+            </div>
+        </div>
+
+        <div class="tabs">
+            <div class="tab active" onclick="showTab('broker')">🏦 Broker</div>
+            <div class="tab" onclick="showTab('orders')">📋 Orders</div>
+            <div class="tab" onclick="showTab('strikes')">🎯 Strikes</div>
+            <div class="tab" onclick="showTab('risk')">⚠️ Risk</div>
+        </div>
+
+        <!-- Broker Tab -->
+        <div id="broker-tab" class="tab-content active">
+            <h2>🏦 Broker Configuration</h2>
+            
+            <div class="setting-group">
+                <h3>IBKR Server Connection</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>IBKR Username</label>
+                        <input type="text" class="form-control" id="ibkr-username" placeholder="your_username">
+                    </div>
+                    <div class="form-group">
+                        <label>IBKR Password</label>
+                        <input type="password" class="form-control" id="ibkr-password" placeholder="your_password">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Gateway Server URL</label>
+                        <input type="text" class="form-control" id="gateway-url" value="https://web-production-a020.up.railway.app" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Trading Mode</label>
+                        <select class="form-control" id="trading-mode">
+                            <option value="paper">Paper Trading</option>
+                            <option value="live">Live Trading</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Trading Settings</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Default Quantity</label>
+                        <input type="number" class="form-control" id="default-qty" value="1" min="1" max="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Time In Force</label>
+                        <select class="form-control" id="tif">
+                            <option value="DAY">DAY</option>
+                            <option value="GTC">GTC</option>
+                            <option value="IOC">IOC</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Orders Tab -->
+        <div id="orders-tab" class="tab-content">
+            <h2>📋 Order Configuration</h2>
+            
+            <div class="setting-group">
+                <h3>Available Order Types</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="enable-buy-call" checked> 
+                            🟢 Buy Call Options
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="enable-buy-put" checked> 
+                            🔴 Buy Put Options
+                        </label>
+                    </div>
+                </div>
+                <p><small>Note: Sell options have been removed per configuration</small></p>
+            </div>
+
+            <div class="setting-group">
+                <h3>Order Execution Settings</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Order Type</label>
+                        <select class="form-control" id="order-type">
+                            <option value="MKT" selected>Market Order (Immediate)</option>
+                            <option value="LMT">Limit Order</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Execution Mode</label>
+                        <select class="form-control" id="execution-mode">
+                            <option value="instant" selected>Instant Execution</option>
+                            <option value="confirm">Require Confirmation</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Strikes Tab -->
+        <div id="strikes-tab" class="tab-content">
+            <h2>🎯 Strike Configuration</h2>
+            
+            <div class="setting-group">
+                <h3>Strike Distance from Current Price</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Strike Percentage Offset</label>
+                        <select class="form-control" id="strike-percentage">
+                            <option value="0.5">0.5% from current price</option>
+                            <option value="1" selected>1% from current price</option>
+                            <option value="1.5">1.5% from current price</option>
+                            <option value="2">2% from current price</option>
+                            <option value="3">3% from current price</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Direction Logic</label>
+                        <select class="form-control" id="strike-direction">
+                            <option value="otm" selected>Out of the Money (OTM)</option>
+                            <option value="itm">In the Money (ITM)</option>
+                            <option value="atm">At the Money (ATM)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Expiration Settings (DTE)</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Days to Expiration (DTE)</label>
+                        <select class="form-control" id="dte-selection">
+                            <option value="0" selected>0DTE (Same Day)</option>
+                            <option value="1">1DTE (Next Day)</option>
+                            <option value="2">2DTE</option>
+                            <option value="3">3DTE</option>
+                            <option value="7">7DTE (Weekly)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Fallback if DTE not Available</label>
+                        <select class="form-control" id="dte-fallback">
+                            <option value="next" selected>Next available DTE</option>
+                            <option value="nearest">Nearest expiration</option>
+                            <option value="weekly">Next weekly</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Strike Calculation Preview</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Call Strike (1% OTM)</label>
+                        <input type="text" class="form-control" id="call-strike-preview" readonly placeholder="Will calculate based on current price">
+                    </div>
+                    <div class="form-group">
+                        <label>Put Strike (1% OTM)</label>
+                        <input type="text" class="form-control" id="put-strike-preview" readonly placeholder="Will calculate based on current price">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Risk Tab -->
+        <div id="risk-tab" class="tab-content">
+            <h2>⚠️ Risk Management</h2>
+            
+            <div class="setting-group">
+                <h3>Trading Limits</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Max Position Size ($)</label>
+                        <input type="number" class="form-control" id="max-position" value="1000" min="100">
+                    </div>
+                    <div class="form-group">
+                        <label>Max Daily Trades</label>
+                        <input type="number" class="form-control" id="max-daily-trades" value="10" min="1" max="100">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Stop Loss %</label>
+                        <input type="number" class="form-control" id="stop-loss" value="20" min="5" max="50">
+                    </div>
+                    <div class="form-group">
+                        <label>Take Profit %</label>
+                        <input type="number" class="form-control" id="take-profit" value="50" min="10" max="200">
+                    </div>
+                </div>
+            </div>
+
+            <div class="setting-group">
+                <h3>Safe Mode</h3>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Safe Mode Status</label>
+                        <label class="switch">
+                            <input type="checkbox" id="safe-mode" checked>
+                            <span class="slider"></span>
+                        </label>
+                        <p><small>Safe Mode prevents real trading - only testing</small></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="btn btn-success" onclick="saveSettings()">💾 Save Settings</button>
+            <button class="btn btn-primary" onclick="testConnection()">🔍 Test Connection</button>
+            <button class="btn btn-warning" onclick="loadSettings()">🔄 Load Settings</button>
+            <button class="btn btn-primary" onclick="testIBKRIntegration()">🏦 Test IBKR Integration</button>
+            <button class="btn btn-danger" onclick="resetSettings()">⚠️ Reset</button>
+        </div>
+    </div>
+
+    <script>
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => content.classList.remove('active'));
+            
+            // Hide all tab buttons
+            const tabs = document.querySelectorAll('.tab');
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Save settings
+        async function saveSettings() {
+            const settings = {
+                broker: {
+                    username: document.getElementById('ibkr-username').value,
+                    password: document.getElementById('ibkr-password').value,
+                    gatewayUrl: document.getElementById('gateway-url').value,
+                    tradingMode: document.getElementById('trading-mode').value,
+                    defaultQty: document.getElementById('default-qty').value,
+                    tif: document.getElementById('tif').value
+                },
+                orders: {
+                    enableBuyCall: document.getElementById('enable-buy-call').checked,
+                    enableBuyPut: document.getElementById('enable-buy-put').checked,
+                    orderType: document.getElementById('order-type').value,
+                    executionMode: document.getElementById('execution-mode').value
+                },
+                strikes: {
+                    strikePercentage: document.getElementById('strike-percentage').value,
+                    strikeDirection: document.getElementById('strike-direction').value,
+                    dteSelection: document.getElementById('dte-selection').value,
+                    dteFallback: document.getElementById('dte-fallback').value
+                },
+                risk: {
+                    maxPosition: document.getElementById('max-position').value,
+                    maxDailyTrades: document.getElementById('max-daily-trades').value,
+                    stopLoss: document.getElementById('stop-loss').value,
+                    takeProfit: document.getElementById('take-profit').value,
+                    safeMode: document.getElementById('safe-mode').checked
+                }
+            };
+
+            try {
+                const response = await fetch('/api/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+
+                if (response.ok) {
+                    alert('✅ Settings saved successfully!');
+                } else {
+                    alert('❌ Error saving settings');
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert('❌ Connection error');
+            }
+        }
+
+        // Test connection
+        async function testConnection() {
+            try {
+                const response = await fetch('/api/test-connection');
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('✅ Connection successful!');
+                } else {
+                    alert('❌ Connection issue: ' + result.error);
+                }
+            } catch (error) {
+                alert('❌ Connection test failed');
+            }
+        }
+
+        // Load settings
+        async function loadSettings() {
+            try {
+                const response = await fetch('/api/settings');
+                const settings = await response.json();
+                
+                // Populate form fields
+                if (settings.broker) {
+                    document.getElementById('ibkr-username').value = settings.broker.username || '';
+                    document.getElementById('gateway-url').value = settings.broker.gatewayUrl || '';
+                    document.getElementById('trading-mode').value = settings.broker.tradingMode || 'paper';
+                    document.getElementById('default-qty').value = settings.broker.defaultQty || '1';
+                    document.getElementById('tif').value = settings.broker.tif || 'DAY';
+                }
+
+                if (settings.orders) {
+                    document.getElementById('enable-buy-call').checked = settings.orders.enableBuyCall !== false;
+                    document.getElementById('enable-buy-put').checked = settings.orders.enableBuyPut !== false;
+                    document.getElementById('order-type').value = settings.orders.orderType || 'MKT';
+                    document.getElementById('execution-mode').value = settings.orders.executionMode || 'instant';
+                }
+
+                if (settings.strikes) {
+                    document.getElementById('strike-percentage').value = settings.strikes.strikePercentage || '1';
+                    document.getElementById('strike-direction').value = settings.strikes.strikeDirection || 'otm';
+                    document.getElementById('dte-selection').value = settings.strikes.dteSelection || '0';
+                    document.getElementById('dte-fallback').value = settings.strikes.dteFallback || 'next';
+                }
+
+                if (settings.risk) {
+                    document.getElementById('max-position').value = settings.risk.maxPosition || '1000';
+                    document.getElementById('max-daily-trades').value = settings.risk.maxDailyTrades || '10';
+                    document.getElementById('stop-loss').value = settings.risk.stopLoss || '20';
+                    document.getElementById('take-profit').value = settings.risk.takeProfit || '50';
+                    document.getElementById('safe-mode').checked = settings.risk.safeMode !== false;
+                }
+                
+                updateStrikePreviews();
+                alert('✅ Settings loaded successfully!');
+            } catch (error) {
+                console.error('Error loading settings:', error);
+                alert('❌ Error loading settings');
+            }
+        }
+
+        // Reset settings
+        function resetSettings() {
+            if (confirm('Are you sure you want to reset all settings?')) {
+                document.getElementById('ibkr-username').value = '';
+                document.getElementById('trading-mode').value = 'paper';
+                document.getElementById('safe-mode').checked = true;
+                document.getElementById('default-qty').value = '1';
+                document.getElementById('strike-percentage').value = '1';
+                document.getElementById('dte-selection').value = '0';
+                
+                alert('✅ Settings reset');
+            }
+        }
+
+        // Update strike calculation previews
+        function updateStrikePreviews() {
+            const percentage = parseFloat(document.getElementById('strike-percentage').value);
+            const direction = document.getElementById('strike-direction').value;
+            
+            // Mock current price for demo (in real implementation, fetch from API)
+            const mockCurrentPrice = 150.00; // Example: SPY current price
+            
+            let callStrike, putStrike;
+            
+            if (direction === 'otm') {
+                callStrike = mockCurrentPrice * (1 + percentage / 100);
+                putStrike = mockCurrentPrice * (1 - percentage / 100);
+            } else if (direction === 'itm') {
+                callStrike = mockCurrentPrice * (1 - percentage / 100);
+                putStrike = mockCurrentPrice * (1 + percentage / 100);
+            } else { // atm
+                callStrike = mockCurrentPrice;
+                putStrike = mockCurrentPrice;
+            }
+            
+            document.getElementById('call-strike-preview').value = `$${callStrike.toFixed(2)} (${percentage}% ${direction.toUpperCase()})`;
+            document.getElementById('put-strike-preview').value = `$${putStrike.toFixed(2)} (${percentage}% ${direction.toUpperCase()})`;
+        }
+
+        // Test IBKR Integration
+        async function testIBKRIntegration() {
+            try {
+                const testData = {
+                    symbol: 'SPY',
+                    strikePercentage: document.getElementById('strike-percentage').value,
+                    dte: document.getElementById('dte-selection').value,
+                    orderType: document.getElementById('order-type').value
+                };
+                
+                const response = await fetch('/api/test-ibkr', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert(`✅ IBKR Integration Test Successful!\n\nSymbol: ${result.symbol}\nCall Strike: ${result.callStrike}\nPut Strike: ${result.putStrike}\nExpiration: ${result.expiration}\nDTE: ${result.dte}\nOrder Type: ${result.orderType}\nStrike Percentage: ${result.strikePercentage}\n\nReady for live trading!`);
+                } else {
+                    alert(`❌ IBKR Test Failed: ${result.error}`);
+                }
+            } catch (error) {
+                alert(`❌ IBKR Integration Error: ${error.message}`);
+            }
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSettings();
+            
+            // Add listeners for strike calculation
+            document.getElementById('strike-percentage').addEventListener('change', updateStrikePreviews);
+            document.getElementById('strike-direction').addEventListener('change', updateStrikePreviews);
+            
+            // Update strike previews on load
+            updateStrikePreviews();
+        });
+    </script>
+</body>
+</html>

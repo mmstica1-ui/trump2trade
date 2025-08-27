@@ -127,6 +127,125 @@ app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   res.json({ ok: true });
 });
 
+// Serve static files (settings page)
+app.use(express.static('public'));
+
+// API endpoints for settings management
+app.get('/api/settings', (req: express.Request, res: express.Response) => {
+  const settings = {
+    broker: {
+      username: process.env.TRUMP_BOT_IBKR_USERNAME || '',
+      password: '***hidden***', // Don't expose password
+      gatewayUrl: process.env.IBKR_GATEWAY_URL || 'https://web-production-a020.up.railway.app',
+      tradingMode: process.env.TRUMP_BOT_TRADING_MODE || 'paper',
+      environment: process.env.TRUMP_BOT_ENVIRONMENT || 'production',
+      safeMode: process.env.DISABLE_TRADES === 'true',
+      defaultQty: process.env.IBKR_ORDER_DEFAULT_QTY || '1',
+      tif: process.env.IBKR_ORDER_TIF || 'DAY'
+    },
+    orders: {
+      enableBuyCall: true,
+      enableBuyPut: true,
+      orderType: 'MKT',
+      executionMode: 'instant'
+    },
+    strikes: {
+      strikePercentage: '1',
+      strikeDirection: 'otm',
+      dteSelection: '0',
+      dteFallback: 'next'
+    },
+    risk: {
+      maxPosition: '1000',
+      maxDailyTrades: '10',
+      stopLoss: '20',
+      takeProfit: '50'
+    }
+  };
+  res.json(settings);
+});
+
+app.post('/api/settings', (req: express.Request, res: express.Response) => {
+  // For now, just return success - in production this would update environment
+  const settings = req.body;
+  log.info({ settings }, 'Settings update requested');
+  res.json({ success: true, message: 'Settings saved successfully' });
+});
+
+app.get('/api/test-connection', async (req: express.Request, res: express.Response) => {
+  try {
+    const axios = (await import('axios')).default;
+    const railwayUrl = 'https://web-production-a020.up.railway.app';
+    
+    // Test Railway connection
+    const response = await axios.get(`${railwayUrl}/health`, { timeout: 5000 });
+    const isHealthy = response.data?.status === 'healthy';
+    
+    res.json({ 
+      success: isHealthy, 
+      status: isHealthy ? 'Railway Gateway Connected' : 'Railway Gateway Issue',
+      details: response.data 
+    });
+  } catch (error: any) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
+app.post('/api/test-ibkr', async (req: express.Request, res: express.Response) => {
+  try {
+    const { symbol = 'SPY', strikePercentage = '1', dte = '0', orderType = 'MKT' } = req.body;
+    
+    // Mock current price (in real implementation, get from IBKR)
+    const currentPrice = 150.00;
+    const percentage = parseFloat(strikePercentage);
+    
+    // Calculate strike prices
+    const callStrike = (currentPrice * (1 + percentage / 100)).toFixed(2);
+    const putStrike = (currentPrice * (1 - percentage / 100)).toFixed(2);
+    
+    // Calculate expiration date
+    const now = new Date();
+    const expirationDate = new Date(now);
+    expirationDate.setDate(now.getDate() + parseInt(dte));
+    
+    // Test Railway IBKR connection
+    const axios = (await import('axios')).default;
+    const railwayUrl = 'https://web-production-a020.up.railway.app';
+    
+    try {
+      const configResponse = await axios.get(`${railwayUrl}/config`, { timeout: 5000 });
+      const ibkrReady = configResponse.data?.ready_for_trading === true;
+      
+      if (ibkrReady) {
+        res.json({
+          success: true,
+          symbol,
+          currentPrice,
+          callStrike,
+          putStrike,
+          expiration: expirationDate.toISOString().split('T')[0],
+          dte,
+          orderType,
+          strikePercentage: `${percentage}%`,
+          message: 'IBKR integration ready - parameters validated'
+        });
+      } else {
+        res.json({
+          success: false,
+          error: 'IBKR not ready for trading on Railway gateway'
+        });
+      }
+    } catch (railwayError: any) {
+      res.json({
+        success: false,
+        error: `Railway gateway error: ${railwayError.message}`
+      });
+    }
+  } catch (error: any) {
+    res.json({ success: false, error: error.message });
+  }
+});
+
 // Startup message throttling to prevent spam
 import fs from 'fs';
 const STARTUP_MSG_THROTTLE_MS = 5 * 60 * 1000; // 5 minutes

@@ -68,25 +68,34 @@ export async function sendTrumpAlert(args: {
   const relevanceScore = args.relevanceScore || 5;
   const totalDelayMs = args.totalDelayMs || (alertTime.getTime() - originalPostTime.getTime());
   
-  // Build inline keyboard with smart Call/Put buttons for each ticker
+  // Build inline keyboard with percentage-based strike buttons (only Buy options)
   const kb = new InlineKeyboard();
   
   // Use ticker analysis if available for smart button ordering
-  const tickerData = args.tickerAnalysis || args.tickers.slice(0, 6).map(t => ({symbol: t, impact: 'neutral' as const, reason: 'Market impact'}));
+  const tickerData = args.tickerAnalysis || args.tickers.slice(0, 4).map(t => ({symbol: t, impact: 'neutral' as const, reason: 'Market impact'}));
   
-  for (const ticker of tickerData.slice(0, 6)) { // Support up to 6 tickers
+  for (const ticker of tickerData.slice(0, 4)) { // Support up to 4 tickers
+    const t = ticker.symbol;
     if (ticker.impact === 'positive') {
-      // For bullish tickers: Call button first (recommended)
-      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
-      kb.text(`📉 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
+      // For bullish tickers: Call buttons with percentages (recommended first)
+      kb.text(`🟢 Call ${t} 0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
+      kb.text(`🟢 Call ${t} 1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
+      kb.text(`🟢 Call ${t} 2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' })).row();
+      kb.text(`🔴 Put ${t} 0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
+      kb.text(`🔴 Put ${t} 1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
+      kb.text(`🔴 Put ${t} 2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' })).row();
     } else if (ticker.impact === 'negative') {
-      // For bearish tickers: Put button first (recommended)
-      kb.text(`📉 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol }));
-      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol })).row();
+      // For bearish tickers: Put buttons first (recommended)
+      kb.text(`🔴 Put ${t} 0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
+      kb.text(`🔴 Put ${t} 1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
+      kb.text(`🔴 Put ${t} 2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' })).row();
+      kb.text(`🟢 Call ${t} 0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
+      kb.text(`🟢 Call ${t} 1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
+      kb.text(`🟢 Call ${t} 2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' })).row();
     } else {
-      // Neutral or legacy format: default order
-      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
-      kb.text(`📉 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
+      // Neutral: standard 1% strike buttons
+      kb.text(`🟢 Call ${t} 1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
+      kb.text(`🔴 Put ${t} 1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' })).row();
     }
   }
   
@@ -101,84 +110,39 @@ export async function sendTrumpAlert(args: {
   const discoveryDelayMs = postDiscoveredAt.getTime() - originalPostTime.getTime();
   const processingDelayMs = alertTime.getTime() - postDiscoveredAt.getTime();
   
-  // Build comprehensive message with PRECISE timing and professional design
-  let message = `🦅 <b>Trump Alert • INSTANT</b>\n`;
-  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
+  // Simple and clean English message format
+  let message = `🦅 <b>Trump Trading Alert</b>\n\n`;
   
-  // Show timing with professional formatting
-  message += `🕐 <b>Original Post:</b> ${originalPostTime.toLocaleString('en-US', { 
-    timeZone: 'UTC',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })} UTC\n`;
-  
-  message += `⚡ <b>Alert Time:</b> ${alertTime.toLocaleString('en-US', { 
-    timeZone: 'UTC', 
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit'
-  })} UTC\n`;
-  
-  // Professional delay indication with clearer icons
-  const totalDelaySeconds = Math.round(totalDelayMs / 1000);
-  let delayIcon = '🚀'; // Ultra fast
-  if (totalDelaySeconds > 5) delayIcon = '⚡'; // Fast
-  if (totalDelaySeconds > 15) delayIcon = '⏱️'; // Medium
-  if (totalDelaySeconds > 30) delayIcon = '⚠️'; // Slow
-  
-  message += `${delayIcon} <b>Processing Time:</b> ${totalDelaySeconds} seconds\n`;
-  
-  // Technical breakdown with clear separation
-  const breakdownParts = [];
-  if (discoveryDelayMs > 1000) {
-    breakdownParts.push(`🔍 Discovery: ${Math.round(discoveryDelayMs/1000)}s`);
-  }
-  if (analysisTimeMs > 0) {
-    breakdownParts.push(`🧠 Analysis: ${Math.round(analysisTimeMs/1000)}s`);
-  }
-  breakdownParts.push(`📡 Delivery: ${Math.round(processingDelayMs/1000)}s`);
-  
-  if (breakdownParts.length > 0) {
-    message += `📊 Breakdown: ${breakdownParts.join(' • ')}\n`;
-  }
-  message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
-  
-  // Original post with better formatting
+  // Show original post content
   if (args.originalPost) {
-    const truncatedPost = args.originalPost.length > 200 
-      ? args.originalPost.substring(0, 200) + '...' 
+    const truncatedPost = args.originalPost.length > 150 
+      ? args.originalPost.substring(0, 150) + '...' 
       : args.originalPost;
-    message += `📄 <b>Original Trump Post:</b>\n`;
-    message += `<blockquote expandable>${truncatedPost}</blockquote>\n\n`;
+    message += `📝 <b>Trump Post:</b>\n`;
+    message += `<i>"${truncatedPost}"</i>\n\n`;
   }
   
-  // Analysis with professional presentation
-  message += `📈 <b>Market Impact Analysis:</b>\n`;
+  // Market analysis
+  message += `📈 <b>Market Analysis:</b>\n`;
   message += `${args.summary}\n\n`;
   
-  // Trading opportunities section
-  const relevanceEmoji = relevanceScore >= 8 ? '🎯' : relevanceScore >= 6 ? '🟢' : '🟡';
-  message += `💰 <b>Trading Opportunities:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
-  
+  // Trading signals
   if (args.tickerAnalysis && args.tickerAnalysis.length > 0) {
-    // Enhanced ticker format with professional icons
+    message += `🎯 <b>Trading Signals:</b>\n`;
     for (const ticker of args.tickerAnalysis) {
-      const impactEmoji = ticker.impact === 'positive' ? '📈' : '📉';
-      const impactText = ticker.impact === 'positive' ? 'BULLISH' : 'BEARISH';
-      const impactColor = ticker.impact === 'positive' ? '🟢' : '🔴';
-      
-      message += `${impactColor} <b>${ticker.symbol}</b> • ${impactEmoji} ${impactText}\n`;
-      message += `    💭 ${ticker.reason}\n\n`;
+      const signal = ticker.impact === 'positive' ? '🟢 BULLISH' : '🔴 BEARISH';
+      message += `• <b>${ticker.symbol}</b> ${signal} - ${ticker.reason}\n`;
     }
   } else {
-    // Fallback format with better styling
-    message += `📊 <code>${args.tickers.join(' • ')}</code>\n\n`;
+    message += `🎯 <b>Tickers:</b> ${args.tickers.join(', ')}\n`;
   }
   
-  // Link with professional styling
-  message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `🔗 <a href="${args.url}">View Original Post on Truth Social</a>`;
+  // Relevance score
+  const scoreEmoji = relevanceScore >= 8 ? '🔥' : relevanceScore >= 6 ? '⭐' : '📊';
+  message += `\n${scoreEmoji} <b>Impact Score:</b> ${relevanceScore}/10\n\n`;
+  
+  // Link
+  message += `🔗 <a href="${args.url}">View Original Post</a>`;
 
   // Add to daily analytics
   try {
