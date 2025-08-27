@@ -34,8 +34,10 @@ export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolea
   try {
     const base = process.env.IBKR_BASE_URL;
     if (base) {
-      const r = await axios.get(`${base}/iserver/auth/status`, { timeout: 5000, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
-      ibkrOk = !!(r.data?.authenticated);
+      // Use YOUR server's /health endpoint instead of IBKR API
+      const r = await axios.get(`${base}/health`, { timeout: 5000, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
+      // Check your server's health response format
+      ibkrOk = !!(r.data?.ibkr_connected && r.data?.trading_ready && r.data?.status === 'healthy');
     }
   } catch {}
   return { appOk, ibkrOk };

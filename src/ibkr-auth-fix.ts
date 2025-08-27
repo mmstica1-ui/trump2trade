@@ -16,24 +16,19 @@ export class IBKRAuthManager {
 
   async ensureAuthenticated(): Promise<boolean> {
     try {
-      // Check if we need to re-authenticate (every 30 minutes)
-      if (Date.now() - this.lastAuthTime > 30 * 60 * 1000 || !this.authToken) {
-        await this.authenticate();
-      }
-
-      // Verify authentication
-      const statusResponse = await fetch(`${this.baseUrl}/v1/api/iserver/auth/status`);
-      const status = await statusResponse.json();
+      // For YOUR server, we just check if it's healthy and connected
+      const healthResponse = await fetch(`${this.baseUrl}/health`);
+      const health = await healthResponse.json();
       
-      if (status.authenticated) {
+      if (health.status === 'healthy' && health.ibkr_connected && health.trading_ready) {
+        this.lastAuthTime = Date.now();
         return true;
       } else {
-        // Force re-authentication
-        await this.authenticate();
-        return true;
+        console.log('Your IBKR server not ready:', health);
+        return false;
       }
     } catch (error) {
-      console.error('Authentication check failed:', error);
+      console.error('Failed to check your server health:', error);
       return false;
     }
   }
@@ -97,14 +92,41 @@ export class IBKRAuthManager {
   }
 
   async getAccountData(): Promise<any> {
+    // Try your server's trading endpoints first
+    try {
+      const response = await fetch(`${this.baseUrl}/trading/account`);
+      if (response.ok) {
+        return response.json();
+      }
+    } catch (e) {}
+    
+    // Fallback to standard IBKR API if your server doesn't have this endpoint
     return this.makeAuthenticatedRequest('/v1/api/iserver/accounts');
   }
 
   async getBalance(): Promise<any> {
+    // Try your server's trading endpoints first
+    try {
+      const response = await fetch(`${this.baseUrl}/trading/balance`);
+      if (response.ok) {
+        return response.json();
+      }
+    } catch (e) {}
+    
+    // Fallback to standard IBKR API
     return this.makeAuthenticatedRequest(`/v1/api/iserver/account/${this.accountId}/summary`);
   }
 
   async getPositions(): Promise<any> {
+    // Try your server's trading endpoints first
+    try {
+      const response = await fetch(`${this.baseUrl}/trading/positions`);
+      if (response.ok) {
+        return response.json();
+      }
+    } catch (e) {}
+    
+    // Fallback to standard IBKR API
     return this.makeAuthenticatedRequest(`/v1/api/iserver/account/${this.accountId}/positions/0`);
   }
 }
