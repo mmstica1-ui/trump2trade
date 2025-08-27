@@ -26,6 +26,7 @@ import { startTruthPoller } from './poller.js';
 import { handleApifyWebhook } from './apify.js';
 import { handleGensparkWebhook } from './genspark.js';
 import { startSynopticListener } from './synoptic.js';
+import { healthMonitor } from './health-monitor.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -305,6 +306,10 @@ app.listen(PORT, async () => {
   startOpsSelfChecks();
   startTruthPoller();
   startSynopticListener(); // Start the corrected Synoptic WebSocket listener
+  
+  // Start Health Monitor - Auto-fixing system
+  healthMonitor.start();
+  log.info('🔧 Health Monitor started - Auto-healing system active');
   
   // Send startup message only if enough time has passed (prevents Railway redeploy spam)
   const now = Date.now();
