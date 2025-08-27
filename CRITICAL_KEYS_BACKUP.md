@@ -45,9 +45,17 @@ GENSPARK_WEBHOOK_SECRET=moshe454
 - `/trading/orders` - Order history
 
 ### 🚀 Authentication Flow
-1. POST `/auth/login` with demo credentials
+1. POST `/auth/login` with demo credentials (demo_user/demo_password)
 2. Get `api_token` from response
 3. Use `Authorization: Bearer {token}` header for all /trading/* endpoints
+
+### 📝 Railway Variables (For Reference)
+```bash
+# These are the actual Railway TWS credentials (not used by current server)
+TWS_USERNAME=ilyuwc476
+TWS_PASSWORD=trump123!
+```
+**Note**: Current server uses demo credentials, not Railway TWS credentials
 
 ### 📋 Test Commands Work
 - `/ibkr_status` ✅ - Shows server connection
