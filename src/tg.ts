@@ -254,6 +254,8 @@ bot.command('help', async (ctx) => {
 /connect_real_ibkr - Connect to YOUR real IBKR account
 /real_balance - YOUR real account balance  
 /real_positions - YOUR real portfolio positions
+/ibkr_balance - Same as /real_balance (shortcut)
+/ibkr_positions - Same as /real_positions (shortcut)
 /place_real_order - Execute REAL orders
 
 📈 <b>Order Format:</b>
@@ -601,6 +603,104 @@ bot.command('real_positions', async (ctx) => {
     
   } catch (error: any) {
     await ctx.reply(`❌ Real positions error: ${error?.message || error}\n\n🔧 Try: /connect_real_ibkr first`);
+  }
+});
+
+// Add aliases for easier access
+bot.command('ibkr_positions', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  
+  try {
+    await ctx.reply('📊 Accessing YOUR IBKR positions...');
+    
+    // First check if your server is healthy
+    const serverResponse = await fetch(`${process.env.IBKR_BASE_URL}/health`);
+    const serverHealth = await serverResponse.json();
+    
+    if (!serverHealth.ibkr_connected || !serverHealth.trading_ready) {
+      await ctx.reply(`❌ <b>Your IBKR Server Not Ready</b>\n\nServer Status: ${serverHealth.status}\nIBKR Connected: ${serverHealth.ibkr_connected ? '✅' : '❌'}\nTrading Ready: ${serverHealth.trading_ready ? '✅' : '❌'}`, { parse_mode: 'HTML' });
+      return;
+    }
+    
+    // Try to get real positions using authentication
+    try {
+      const { realIBKR } = await import('./real-ibkr-connector.js');
+      const positions = await realIBKR.getRealPositions();
+      
+      let message = `📊 <b>YOUR IBKR POSITIONS</b>\n\n`;
+      message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
+      message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
+      
+      if (positions && typeof positions === 'object' && 'total_positions' in positions) {
+        message += `📈 <b>Total Positions:</b> ${(positions as any).total_positions}\n`;
+        message += `🔄 <b>Trading Mode:</b> ${(positions as any).trading_mode || 'paper'}\n`;
+        message += `⏰ <b>Last Updated:</b> ${(positions as any).last_updated || 'Unknown'}\n\n`;
+        
+        if ((positions as any).total_positions === 0) {
+          message += `✅ <b>No Open Positions</b>\n`;
+          message += `Your account is ready for new trades.\n\n`;
+        } else {
+          message += `📊 <b>Active Positions:</b>\n`;
+          message += `${JSON.stringify((positions as any).positions, null, 2)}\n\n`;
+        }
+      } else {
+        message += `📊 <b>Raw Data:</b>\n${JSON.stringify(positions, null, 2)}\n\n`;
+      }
+      
+      message += `✅ <b>Live data from YOUR server!</b>`;
+      
+      await ctx.reply(message, { parse_mode: 'HTML' });
+      
+    } catch (error: any) {
+      await ctx.reply(`❌ <b>Connection Error</b>\n\nError: ${error.message}\n\n🔧 Check your IBKR server connection.`);
+    }
+    
+  } catch (error: any) {
+    await ctx.reply(`❌ Server error: ${error?.message || error}\n\n🔧 Server: ${process.env.IBKR_BASE_URL}`);
+  }
+});
+
+bot.command('ibkr_balance', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  
+  try {
+    await ctx.reply('💰 Accessing YOUR IBKR balance...');
+    
+    // First check if your server is healthy
+    const serverResponse = await fetch(`${process.env.IBKR_BASE_URL}/health`);
+    const serverHealth = await serverResponse.json();
+    
+    if (!serverHealth.ibkr_connected || !serverHealth.trading_ready) {
+      await ctx.reply(`❌ <b>Your IBKR Server Not Ready</b>\n\nServer Status: ${serverHealth.status}\nIBKR Connected: ${serverHealth.ibkr_connected ? '✅' : '❌'}\nTrading Ready: ${serverHealth.trading_ready ? '✅' : '❌'}`, { parse_mode: 'HTML' });
+      return;
+    }
+    
+    // Try to get real balance using authentication
+    try {
+      const { realIBKR } = await import('./real-ibkr-connector.js');
+      const balance = await realIBKR.getRealBalance();
+      
+      let message = `💰 <b>YOUR IBKR ACCOUNT BALANCE</b>\n\n`;
+      message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
+      message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
+      
+      message += `💰 <b>Balance Data:</b>\n`;
+      if (balance && typeof balance === 'object') {
+        message += `${JSON.stringify(balance, null, 2)}\n\n`;
+      } else {
+        message += `Balance: ${balance}\n\n`;
+      }
+      
+      message += `✅ <b>Live data from YOUR server!</b>`;
+      
+      await ctx.reply(message, { parse_mode: 'HTML' });
+      
+    } catch (error: any) {
+      await ctx.reply(`❌ <b>Balance Access Error</b>\n\nError: ${error.message}\n\n🔧 Check your IBKR server connection.`);
+    }
+    
+  } catch (error: any) {
+    await ctx.reply(`❌ Server error: ${error?.message || error}\n\n🔧 Server: ${process.env.IBKR_BASE_URL}`);
   }
 });
 
