@@ -47,7 +47,10 @@ const POLICY_TICKER_MAP = {
   'fed|interest|rate|inflation': ['TLT', 'XLF', 'IEF', 'SPY']
 };
 
-export async function analyzePost(text: string): Promise<{ 
+export async function analyzePost(
+  text: string, 
+  mediaUrls?: string[]
+): Promise<{ 
   summary: string; 
   tickers: string[]; 
   relevanceScore: number;
@@ -65,15 +68,33 @@ export async function analyzePost(text: string): Promise<{
     } catch (monitorError: any) {
       console.log('⚠️ Could not update Gemini no-key status:', monitorError?.message || monitorError);
     }
-    return getMockAnalysis(text);
+    return getMockAnalysis(text, mediaUrls);
   }
   
   // ⚡ SPEED OPTIMIZATION - Start timing
   const startTime = Date.now();
-  // ⚡ ULTRA-FAST PROMPT - Minimal but precise
-  const prompt = `FAST ANALYSIS: Trump post market impact.
+  
+  // Enhanced prompt with media analysis capability
+  let prompt = `FAST ANALYSIS: Trump post market impact.
 
-Post: "${text.substring(0, 200)}" 
+Post: "${text.substring(0, 200)}"`;
+
+  // Add media analysis if present
+  if (mediaUrls && mediaUrls.length > 0) {
+    const mediaTypes = mediaUrls.map(url => {
+      const ext = url.split('.').pop()?.toLowerCase();
+      if (['jpg', 'jpeg', 'png', 'gif'].includes(ext || '')) return 'image';
+      if (['mp4', 'mov', 'avi', 'webm'].includes(ext || '')) return 'video';
+      return 'media';
+    });
+    
+    prompt += `
+
+Media Content: Contains ${mediaTypes.join(', ')} (${mediaUrls.length} files)
+Note: Post includes visual content that may contain additional context about policy, events, or market-relevant information.`;
+  }
+
+  prompt += `
 
 Return JSON only:
 {
@@ -87,7 +108,8 @@ Rules:
 - Tech: XLK,META,GOOGL  
 - Energy: XLE,USO
 - General: SPY,QQQ
-- Defense: ITA`;
+- Defense: ITA
+- Media content may provide additional context for analysis`;
 
   try {
     // ⚡ TIMEOUT PROTECTION - Max 5 seconds for AI
@@ -153,7 +175,7 @@ Rules:
 }
 
 // Mock analysis for testing without API key
-function getMockAnalysis(text: string): { 
+function getMockAnalysis(text: string, mediaUrls?: string[]): { 
   summary: string; 
   tickers: string[]; 
   relevanceScore: number;
@@ -164,40 +186,51 @@ function getMockAnalysis(text: string): {
   let summary: string;
   let relevanceScore: number;
   
+  // Media presence boosts relevance
+  const hasMedia = mediaUrls && mediaUrls.length > 0;
+  const mediaBoost = hasMedia ? 2 : 0; // Add 2 points for posts with media
+  
+  // Media-only posts (no meaningful text but has video/image)
+  if (hasMedia && (textLower.includes('http') || textLower.includes('link:') || textLower.length < 50)) {
+    summary = hasMedia ? 'Trump shared visual content that may contain policy or market-relevant information requiring analysis.' : 'Limited text content available for analysis.';
+    tickers = ['SPY', 'QQQ', 'DIA'];
+    relevanceScore = Math.min(6 + mediaBoost, 10);
+  }
+  
   // China/Trade analysis
-  if (textLower.includes('china') || textLower.includes('tariff') || textLower.includes('trade')) {
-    summary = 'Trump\'s China trade rhetoric typically impacts Chinese equities, manufacturing sectors, and broad market indices through trade uncertainty.';
+  else if (textLower.includes('china') || textLower.includes('tariff') || textLower.includes('trade')) {
+    summary = hasMedia ? 'Trump\'s China trade content with visual elements may signal policy changes affecting Chinese equities and trade-sensitive sectors.' : 'Trump\'s China trade rhetoric typically impacts Chinese equities, manufacturing sectors, and broad market indices through trade uncertainty.';
     tickers = ['FXI', 'ASHR', 'XLI'];
-    relevanceScore = 9;
+    relevanceScore = Math.min(9 + mediaBoost, 10);
   }
   
   // Tech + Energy analysis (combined topics get higher relevance)
   else if ((textLower.includes('ai') || textLower.includes('tech')) && 
            (textLower.includes('energy') || textLower.includes('dominate'))) {
-    summary = 'Trump\'s vision for AI and energy dominance could significantly boost technology and energy sectors.';
+    summary = hasMedia ? 'Trump\'s AI and energy content with visual materials could signal significant policy initiatives affecting technology and energy sectors.' : 'Trump\'s vision for AI and energy dominance could significantly boost technology and energy sectors.';
     tickers = ['XLK', 'XLE', 'QQQ'];
-    relevanceScore = 9; // High relevance for dual-sector impact
+    relevanceScore = Math.min(9 + mediaBoost, 10);
   }
   
   // Tech analysis
   else if (textLower.includes('tech') || textLower.includes('social media') || textLower.includes('ai')) {
-    summary = 'Technology sector regulation discussions can create volatility in tech stocks and related ETFs.';
+    summary = hasMedia ? 'Technology-focused content with visual elements may indicate regulatory or policy changes affecting tech stocks.' : 'Technology sector regulation discussions can create volatility in tech stocks and related ETFs.';
     tickers = ['XLK', 'QQQ', 'META'];
-    relevanceScore = 8;
+    relevanceScore = Math.min(8 + mediaBoost, 10);
   }
   
   // Energy analysis
   else if (textLower.includes('energy') || textLower.includes('oil') || textLower.includes('drill')) {
-    summary = 'Energy policy changes typically boost energy sector equities and related commodity funds.';
+    summary = hasMedia ? 'Energy-related content with visual materials could signal policy changes benefiting energy sector equities.' : 'Energy policy changes typically boost energy sector equities and related commodity funds.';
     tickers = ['XLE', 'USO'];
-    relevanceScore = 9;
+    relevanceScore = Math.min(9 + mediaBoost, 10);
   }
   
   // Default broad market
   else {
-    summary = 'General policy announcement with potential broad market implications across major indices.';
+    summary = hasMedia ? 'Trump post with visual content may contain policy or market-relevant information affecting broad market sentiment.' : 'General policy announcement with potential broad market implications across major indices.';
     tickers = ['SPY', 'QQQ'];
-    relevanceScore = 5;
+    relevanceScore = Math.min(5 + mediaBoost, 10);
   }
   
   // Generate ticker analysis using the same function

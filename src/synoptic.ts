@@ -27,7 +27,13 @@ function isDuplicate(postId: string): boolean {
   return false;
 }
 
-function extractPostData(data: any): { text: string; url: string; postId: string } | null {
+function extractPostData(data: any): { 
+  text: string; 
+  url: string; 
+  postId: string; 
+  mediaUrls?: string[];
+  originalTimestamp?: Date;
+} | null {
   try {
     // 🔄 SYNOPTIC FORMAT FIX: Handle the actual Synoptic event format
     let postData = data;
@@ -73,6 +79,34 @@ function extractPostData(data: any): { text: string; url: string; postId: string
       }, '⏰ Got original post timestamp from Synoptic');
     }
     
+    // 📸 Extract media URLs from post content and media field
+    const mediaUrls: string[] = [];
+    
+    // Extract from text content (URLs to images/videos)
+    const urlRegex = /https?:\/\/[^\s]+\.(jpg|jpeg|png|gif|mp4|mov|avi|webm)/gi;
+    const urlMatches = text.match(urlRegex);
+    if (urlMatches) {
+      mediaUrls.push(...urlMatches);
+    }
+    
+    // Extract from SYNOPTIC media field (if available)
+    if (postData.media && Array.isArray(postData.media)) {
+      for (const mediaItem of postData.media) {
+        if (mediaItem.url) {
+          mediaUrls.push(mediaItem.url);
+        }
+      }
+    }
+    
+    // Log media detection
+    if (mediaUrls.length > 0) {
+      log.info({ 
+        postId, 
+        mediaCount: mediaUrls.length,
+        mediaTypes: mediaUrls.map(url => url.split('.').pop()).join(', ')
+      }, '📸 Media detected in Trump post');
+    }
+    
     if (!text || text.trim().length === 0) {
       log.debug('No valid text content found in post data');
       return null;
@@ -82,8 +116,9 @@ function extractPostData(data: any): { text: string; url: string; postId: string
       text: text.trim(), 
       url, 
       postId: String(postId),
-      originalTimestamp 
-    } as any;
+      originalTimestamp,
+      mediaUrls: mediaUrls.length > 0 ? mediaUrls : undefined
+    };
   } catch (error) {
     log.error({ error, data }, 'Error extracting post data');
     return null;
@@ -196,7 +231,7 @@ function connectToSynoptic() {
         return;
       }
       
-      const { text, url, postId } = postData;
+      const { text, url, postId, mediaUrls } = postData;
       const originalTimestamp = (postData as any).originalTimestamp;
       
       if (isDuplicate(postId)) {
@@ -219,8 +254,8 @@ function connectToSynoptic() {
       // ⚡ OPTIMIZED PIPELINE - Minimize processing time
       const pipelineStartTime = Date.now();
       
-      // Fast parallel AI analysis (with timeout)
-      const analysisPromise = analyzePost(text);
+      // Fast parallel AI analysis (with timeout) - include media URLs
+      const analysisPromise = analyzePost(text, mediaUrls);
       const timeoutPromise = new Promise((_, reject) => 
         setTimeout(() => reject(new Error('AI analysis timeout')), 8000) // 8 second max
       );

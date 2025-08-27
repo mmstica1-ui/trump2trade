@@ -61,6 +61,27 @@ app.post('/webhook/genspark', handleGensparkWebhook);
 app.get('/webhook/genspark', (_: express.Request, res: express.Response) => 
   res.status(405).json({ ok: false, use: 'POST' }));
 
+// dev helper: test media analysis
+app.post('/dev/media-test', async (req: express.Request, res: express.Response) => {
+  const { text, mediaUrls } = req.body || {};
+  
+  const { analyzePost } = await import('./llm.js');
+  const { sendTrumpAlert } = await import('./tg.js');
+  
+  const analysis = await analyzePost(text || 'Trump post with media content', mediaUrls);
+  
+  await sendTrumpAlert({
+    summary: analysis.summary,
+    tickers: analysis.tickers,
+    tickerAnalysis: analysis.tickerAnalysis,
+    url: 'https://truth.social/media-test',
+    originalPost: text,
+    relevanceScore: analysis.relevanceScore
+  });
+  
+  res.json({ ok: true, analysis });
+});
+
 // dev helper: inject a fake post
 app.post('/dev/mock', async (req: express.Request, res: express.Response) => {
   const { 
