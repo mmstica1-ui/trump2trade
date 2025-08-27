@@ -438,16 +438,21 @@ bot.command('ibkr_status', async (ctx) => {
     let authDetails = "Gateway not authenticated";
     
     try {
-      // Try custom auth endpoint first
+      // Try authentication with demo credentials
       let authResponse = await fetch(`${baseUrl}/auth/login`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: "demo_user",
+          password: "demo_password", 
+          trading_mode: "paper"
+        })
       });
       
       if (authResponse.ok) {
         const authData = await authResponse.json();
-        ibkrStatus = healthData.ibkr_connected ? "✅ Connected" : "⚠️ Not Connected";
-        authDetails = `Trading Ready: ${healthData.trading_ready}, Mode: ${healthData.trading_mode || 'paper'}`;
+        ibkrStatus = authData.success ? "✅ Authenticated" : "⚠️ Auth Failed";
+        authDetails = `Token: ${authData.api_token ? 'Valid' : 'None'}, Mode: ${authData.trading_mode || 'paper'}, Status: ${authData.connection_status || 'unknown'}`;
       } else {
         // Fallback to standard IBKR endpoint
         authResponse = await fetch(`${baseUrl}/iserver/auth/status`, {
@@ -738,28 +743,76 @@ Safe Mode: 🟢 ON (No real orders)
 bot.command('ibkr_connect', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    await ctx.reply('🔄 Testing updated IBKR connection...');
+    await ctx.reply('🔄 <b>Testing Railway IBKR Connection...</b>', { parse_mode: 'HTML' });
     
-    // Simulate connection test
-    setTimeout(async () => {
-      await ctx.reply('🧪 Testing IBKR integration - try /ibkr_status and /ibkr_account');
+    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    
+    // Check current status
+    const healthResponse = await fetch(`${baseUrl}/health`);
+    const healthData = await healthResponse.json();
+    
+    await ctx.reply(`📊 <b>Current Status:</b>
+IBKR Connected: ${healthData.ibkr_connected ? '✅' : '❌'}
+Trading Ready: ${healthData.trading_ready ? '✅' : '❌'}
+Version: ${healthData.version}
+
+🔧 Testing authentication...`, { parse_mode: 'HTML' });
+    
+    // Try to trigger authentication (this will fail but give us info)
+    try {
+      const loginResponse = await fetch(`${baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          username: "test_connection",
+          password: "test_connection"
+        })
+      });
       
-      setTimeout(async () => {
-        const message = `🎉 <b>Trump2Trade Setup Complete!</b>
+      const loginData = await loginResponse.json();
+      
+      await ctx.reply(`🔍 <b>Authentication Test Result:</b>
+Status: ${loginResponse.status}
+Response: ${JSON.stringify(loginData)}
 
-✅ Bot: Fully operational
-✅ Railway: Connected
-✅ Settings: Web interface ready
-✅ Commands: All IBKR functions available
+💡 <b>Next Steps:</b>
+1. Verify Railway environment variables:
+   • TWS_USERNAME = your actual IBKR paper username
+   • TWS_PASSWORD = your actual IBKR paper password
+2. Ensure Railway server has access to IBKR
+3. Check if IBKR paper account is active
 
-🌐 <b>Settings Page:</b>
-https://8080-irhizl816o5wh84wzp5re.e2b.dev
+🏦 <b>IBKR Requirements:</b>
+• Paper Trading account must be enabled
+• Credentials must match exactly
+• Account must allow API access`, { parse_mode: 'HTML' });
+      
+    } catch (authError: any) {
+      await ctx.reply(`❌ <b>Authentication Error:</b>
+${authError.message}
 
-Try: /ibkr_account`;
-        
-        await ctx.reply(message, { parse_mode: 'HTML' });
-      }, 3000);
+This suggests Railway server connectivity issues.`, { parse_mode: 'HTML' });
+    }
+    
+    // Final status check
+    setTimeout(async () => {
+      const finalHealthResponse = await fetch(`${baseUrl}/health`);
+      const finalHealthData = await finalHealthResponse.json();
+      
+      const statusEmoji = finalHealthData.ibkr_connected ? '🎉' : '⚠️';
+      const message = `${statusEmoji} <b>Final Connection Status:</b>
+
+🌐 Railway Server: ${finalHealthData.status}
+🏦 IBKR Connected: ${finalHealthData.ibkr_connected ? '✅ YES' : '❌ NO'}
+📊 Trading Ready: ${finalHealthData.trading_ready ? '✅ YES' : '❌ NO'}
+
+${!finalHealthData.ibkr_connected ? 
+  '🔧 <b>Troubleshooting:</b>\n• Check Railway logs for IBKR errors\n• Verify credentials in Railway dashboard\n• Ensure IBKR paper account is active\n• Try /railway_test for detailed diagnostics' : 
+  '🚀 <b>Ready for Trading!</b>\n• Try /ibkr_account for account info\n• Use /ibkr_positions to see positions\n• Test with /ibkr_test_order'}`;
+      
+      await ctx.reply(message, { parse_mode: 'HTML' });
     }, 3000);
+    
   } catch (error: any) {
     await ctx.reply(`❌ Connect error: ${error?.message || error}`);
   }

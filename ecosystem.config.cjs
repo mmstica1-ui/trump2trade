@@ -23,8 +23,8 @@ module.exports = {
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
-      // IBKR Trading Configuration - Railway Cloud Gateway
-      IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
+      // IBKR Trading Configuration - New Working Gateway  
+      IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
       IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
@@ -54,8 +54,8 @@ module.exports = {
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
-      // IBKR Trading Configuration - Railway Cloud Gateway
-      IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
+      // IBKR Trading Configuration - New Working Gateway  
+      IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
       IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
