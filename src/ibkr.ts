@@ -21,36 +21,39 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   }
   if (!p.t) throw new Error('Missing ticker');
 
+  // Get underlying stock contract ID
   const underlying = await searchUnderlying(p.t);
   
-  // Check if server supports options (try to get price and strikes)
-  let supportsOptions = false;
+  // Get current stock price for options calculations
+  let price: number;
   try {
-    const price = await snapshotPrice(underlying.conid);
-    const expiry = await nearestExpiry(underlying.conid);
-    supportsOptions = true;
-    console.log(`✅ Server supports options for ${p.t}`);
+    price = await snapshotPrice(underlying.conid);
+    console.log(`✅ Got current price for ${p.t}: $${price}`);
   } catch (e) {
-    console.log(`⚠️ Server doesn't support options for ${p.t}, using stock orders`);
+    throw new Error(`❌ OPTIONS TRADING ERROR: Cannot get market data for ${p.t}.\n\n🔧 Server missing endpoint: /v1/api/iserver/marketdata/snapshot\n\n💡 Contact server admin to add options trading support.`);
   }
 
-  if (!supportsOptions) {
-    // Fallback to simple stock orders
-    const isBuy = p.a.startsWith('buy');
-    const side = isBuy ? 'BUY' : 'SELL';
-    
-    const order = await placeMarketStockOrder(underlying.conid, side);
-    return `✅ ${side} ${p.t} stock x${qty} (Options not supported by server)\nOrderId: ${order?.id ?? 'n/a'}`;
+  // Get options expiration dates
+  let expiry: string;
+  try {
+    expiry = await nearestExpiry(underlying.conid);
+    console.log(`✅ Got expiration date for ${p.t}: ${expiry}`);
+  } catch (e) {
+    throw new Error(`❌ OPTIONS TRADING ERROR: Cannot get expiration dates for ${p.t}.\n\n🔧 Server missing endpoint: /v1/api/iserver/secdef/strikes\n\n💡 Contact server admin to add options trading support.`);
   }
 
-  // Original options logic (if server supports it)
-  const price = await snapshotPrice(underlying.conid);
+  // Get available strike prices
+  let strikes: number[];
+  try {
+    strikes = await strikesFor(underlying.conid, expiry);
+    console.log(`✅ Got ${strikes.length} strike prices for ${p.t}`);
+  } catch (e) {
+    throw new Error(`❌ OPTIONS TRADING ERROR: Cannot get strike prices for ${p.t}.\n\n🔧 Server missing endpoint: /v1/api/iserver/secdef/strikes\n\n💡 Contact server admin to add options trading support.`);
+  }
+
+  // Calculate target strikes
   const targetUp = price * 1.005;
   const targetDn = price * 0.995;
-
-  const expiry = await nearestExpiry(underlying.conid);
-  const strikes = await strikesFor(underlying.conid, expiry);
-
   const callStrike = toNearest(strikes, targetUp);
   const putStrike  = toNearest(strikes, targetDn);
 
@@ -58,10 +61,22 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   const isCall = p.a.endsWith('call');
   const strike = isCall ? callStrike : putStrike;
 
-  const optConid = await optionConid(underlying.conid, expiry, strike, isCall ? 'C' : 'P');
+  // Get option contract ID
+  let optConid: number;
+  try {
+    optConid = await optionConid(underlying.conid, expiry, strike, isCall ? 'C' : 'P');
+    console.log(`✅ Got option contract ID: ${optConid}`);
+  } catch (e) {
+    throw new Error(`❌ OPTIONS TRADING ERROR: Cannot find option contract for ${p.t} ${strike}${isCall ? 'C' : 'P'}.\n\n🔧 Server missing endpoint: /v1/api/iserver/secdef/info\n\n💡 Contact server admin to add options trading support.`);
+  }
 
-  const order = await placeMarketOptionOrder(optConid, isBuy ? 'BUY' : 'SELL');
-  return `✅ ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} ${p.t} ${expiry} ${strike} x${qty}\nOrderId: ${order?.id ?? 'n/a'}`;
+  // Place the options order
+  try {
+    const order = await placeMarketOptionOrder(optConid, isBuy ? 'BUY' : 'SELL');
+    return `✅ ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} ${p.t} ${expiry} ${strike} x${qty}\nOrderId: ${order?.id ?? 'n/a'}`;
+  } catch (e) {
+    throw new Error(`❌ OPTIONS ORDER ERROR: Failed to place ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} order.\n\n🔧 Error: ${(e as Error).message}\n\n💡 Check server connection and try again.`);
+  }
 }
 
 // Hardcoded popular stock contract IDs for server that doesn't support symbol search
@@ -95,7 +110,8 @@ async function searchUnderlying(symbol: string): Promise<{ conid: number }> {
   } catch (e) {
     // If search fails, show helpful error
     const availableSymbols = Object.keys(SYMBOL_CONIDS).join(', ');
-    throw new Error(`Symbol ${upperSymbol} not supported. Available symbols: ${availableSymbols}. Server doesn't support symbol search - contact admin to add more symbols.`);
+    const errorMsg = `❌ OPTIONS TRADING ERROR: Symbol ${upperSymbol} not supported.\n\n✅ Available symbols: ${availableSymbols}\n\n🔧 For full options support, server needs:\n- POST /v1/api/iserver/secdef/search (symbol lookup)\n- GET /v1/api/iserver/marketdata/snapshot (prices)\n- GET /v1/api/iserver/secdef/strikes (options data)\n- GET /v1/api/iserver/secdef/info (contract lookup)\n\n💡 Contact server admin to add these endpoints.`;
+    throw new Error(errorMsg);
   }
 }
 
@@ -129,33 +145,7 @@ async function optionConid(underlyingConid: number, expiry: string, strike: numb
   return Number(opt.conid);
 }
 
-async function placeMarketStockOrder(stockConid: number, side: 'BUY'|'SELL') {
-  console.log(`🔥 Placing ${side} stock order for contract ${stockConid}`);
-  
-  const body = {
-    orders: [{
-      acctId: acct,
-      conid: stockConid,
-      secType: 'STK',
-      orderType: 'MKT',
-      side,
-      tif,
-      outsideRTH,
-      quantity: qty, // Use quantity for stocks, not totalQuantity
-      referrer: 'Trump2Trade'
-    }]
-  };
-  
-  console.log('📋 Stock order payload:', JSON.stringify(body, null, 2));
-  
-  const r = await axios.post(`${base}/v1/api/iserver/account/${acct}/orders`, body, { 
-    httpsAgent: new https.Agent({ rejectUnauthorized: false }),
-    headers: { 'Content-Type': 'application/json' }
-  });
-  
-  console.log('✅ Stock order response:', r.data);
-  return Array.isArray(r.data) ? r.data[0] : r.data;
-}
+// Stock orders removed - OPTIONS ONLY trading bot
 
 async function placeMarketOptionOrder(optionConid: number, side: 'BUY'|'SELL') {
   const body = {
