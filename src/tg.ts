@@ -76,44 +76,44 @@ export async function sendTrumpAlert(args: {
   
   for (const ticker of tickerData.slice(0, 6)) { // Support up to 6 tickers
     if (ticker.impact === 'positive') {
-      // For bullish tickers: Call button first (recommended) - Hebrew text
-      kb.text(`📈 קנה Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
-      kb.text(`📉 קנה Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
+      // For bullish tickers: Call button first (recommended)
+      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
+      kb.text(`📉 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
     } else if (ticker.impact === 'negative') {
-      // For bearish tickers: Put button first (recommended) - Hebrew text
-      kb.text(`📉 קנה Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol }));
-      kb.text(`📈 קנה Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol })).row();
+      // For bearish tickers: Put button first (recommended)
+      kb.text(`📉 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol }));
+      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol })).row();
     } else {
-      // Neutral or legacy format: default order - Hebrew text
-      kb.text(`📈 קנה Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
-      kb.text(`📉 קנה Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
+      // Neutral or legacy format: default order
+      kb.text(`📈 Buy Call ${ticker.symbol}`, JSON.stringify({ a: 'buy_call', t: ticker.symbol }));
+      kb.text(`📉 Buy Put ${ticker.symbol}`, JSON.stringify({ a: 'buy_put', t: ticker.symbol })).row();
     }
   }
   
-  // Add manual trading button and preview button - Hebrew text
-  kb.text('💼 מסחר ידני', JSON.stringify({ a: 'manual_trade' }));
-  kb.text('👁️ תצוגה מקדימה', JSON.stringify({ a: 'preview' })).row();
+  // Add manual trading button and preview button
+  kb.text('💼 Manual Trading', JSON.stringify({ a: 'manual_trade' }));
+  kb.text('👁️ Preview (no trade)', JSON.stringify({ a: 'preview' })).row();
   
-  // Add prominent link button to original post - Hebrew text
-  kb.url('🔗 צפייה בפוסט המקורי', args.url).row();
+  // Add prominent link button to original post
+  kb.url('🔗 View Original Post', args.url).row();
 
   // Calculate precise delays 
   const discoveryDelayMs = postDiscoveredAt.getTime() - originalPostTime.getTime();
   const processingDelayMs = alertTime.getTime() - postDiscoveredAt.getTime();
   
-  // Build comprehensive message with PRECISE timing and improved Hebrew-friendly design
-  let message = `🦅 <b>התרעת טראמפ • מיידית</b>\n`;
+  // Build comprehensive message with PRECISE timing and professional design
+  let message = `🦅 <b>Trump Alert • INSTANT</b>\n`;
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
   
-  // Show timing with more professional icons and Hebrew format
-  message += `🕐 <b>פוסט מקורי:</b> ${originalPostTime.toLocaleString('he-IL', { 
+  // Show timing with professional formatting
+  message += `🕐 <b>Original Post:</b> ${originalPostTime.toLocaleString('en-US', { 
     timeZone: 'UTC',
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
   })} UTC\n`;
   
-  message += `⚡ <b>זמן התרעה:</b> ${alertTime.toLocaleString('he-IL', { 
+  message += `⚡ <b>Alert Time:</b> ${alertTime.toLocaleString('en-US', { 
     timeZone: 'UTC', 
     hour: '2-digit',
     minute: '2-digit',
@@ -127,20 +127,20 @@ export async function sendTrumpAlert(args: {
   if (totalDelaySeconds > 15) delayIcon = '⏱️'; // Medium
   if (totalDelaySeconds > 30) delayIcon = '⚠️'; // Slow
   
-  message += `${delayIcon} <b>זמן עיבוד:</b> ${totalDelaySeconds} שניות\n`;
+  message += `${delayIcon} <b>Processing Time:</b> ${totalDelaySeconds} seconds\n`;
   
   // Technical breakdown with clear separation
   const breakdownParts = [];
   if (discoveryDelayMs > 1000) {
-    breakdownParts.push(`🔍 גילוי: ${Math.round(discoveryDelayMs/1000)}ש`);
+    breakdownParts.push(`🔍 Discovery: ${Math.round(discoveryDelayMs/1000)}s`);
   }
   if (analysisTimeMs > 0) {
-    breakdownParts.push(`🧠 ניתוח: ${Math.round(analysisTimeMs/1000)}ש`);
+    breakdownParts.push(`🧠 Analysis: ${Math.round(analysisTimeMs/1000)}s`);
   }
-  breakdownParts.push(`📡 משלוח: ${Math.round(processingDelayMs/1000)}ש`);
+  breakdownParts.push(`📡 Delivery: ${Math.round(processingDelayMs/1000)}s`);
   
   if (breakdownParts.length > 0) {
-    message += `📊 פירוט: ${breakdownParts.join(' • ')}\n`;
+    message += `📊 Breakdown: ${breakdownParts.join(' • ')}\n`;
   }
   message += `━━━━━━━━━━━━━━━━━━━━━\n\n`;
   
@@ -149,23 +149,23 @@ export async function sendTrumpAlert(args: {
     const truncatedPost = args.originalPost.length > 200 
       ? args.originalPost.substring(0, 200) + '...' 
       : args.originalPost;
-    message += `📄 <b>הפוסט המקורי:</b>\n`;
+    message += `📄 <b>Original Trump Post:</b>\n`;
     message += `<blockquote expandable>${truncatedPost}</blockquote>\n\n`;
   }
   
   // Analysis with professional presentation
-  message += `📈 <b>ניתוח השפעה על השוק:</b>\n`;
+  message += `📈 <b>Market Impact Analysis:</b>\n`;
   message += `${args.summary}\n\n`;
   
-  // Trading opportunities with Hebrew terminology
+  // Trading opportunities section
   const relevanceEmoji = relevanceScore >= 8 ? '🎯' : relevanceScore >= 6 ? '🟢' : '🟡';
-  message += `💰 <b>הזדמנויות מסחר:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
+  message += `💰 <b>Trading Opportunities:</b> ${relevanceEmoji}${relevanceScore}/10\n\n`;
   
   if (args.tickerAnalysis && args.tickerAnalysis.length > 0) {
     // Enhanced ticker format with professional icons
     for (const ticker of args.tickerAnalysis) {
       const impactEmoji = ticker.impact === 'positive' ? '📈' : '📉';
-      const impactText = ticker.impact === 'positive' ? 'עלייה צפויה' : 'ירידה צפויה';
+      const impactText = ticker.impact === 'positive' ? 'BULLISH' : 'BEARISH';
       const impactColor = ticker.impact === 'positive' ? '🟢' : '🔴';
       
       message += `${impactColor} <b>${ticker.symbol}</b> • ${impactEmoji} ${impactText}\n`;
@@ -178,7 +178,7 @@ export async function sendTrumpAlert(args: {
   
   // Link with professional styling
   message += `━━━━━━━━━━━━━━━━━━━━━\n`;
-  message += `🔗 <a href="${args.url}">צפייה בפוסט המקורי ב-Truth Social</a>`;
+  message += `🔗 <a href="${args.url}">View Original Post on Truth Social</a>`;
 
   // Add to daily analytics
   try {
