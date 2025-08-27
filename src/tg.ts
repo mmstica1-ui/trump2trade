@@ -10,8 +10,8 @@ const chatId = process.env.TELEGRAM_CHAT_ID!;
 
 // Helper function to get IBKR authentication token with real paper account
 async function getIBKRAuthToken(baseUrl: string): Promise<string> {
-  const username = process.env.IBKR_USERNAME || "moshe454test";
-  const password = process.env.IBKR_PASSWORD || "Moshe454!";
+  const username = process.env.TWS_USERNAME || "ilyuwc476";
+  const password = process.env.TWS_PASSWORD || "trump123!";
   
   const authResponse = await fetch(`${baseUrl}/auth/login`, {
     method: 'POST',

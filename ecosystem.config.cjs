@@ -26,8 +26,8 @@ module.exports = {
       // IBKR Trading Configuration - New Working Gateway  
       IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
       IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
-      IBKR_USERNAME: 'moshe454test',
-      IBKR_PASSWORD: 'Moshe454!',
+      TWS_USERNAME: 'ilyuwc476',
+      TWS_PASSWORD: 'trump123!',
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
@@ -59,8 +59,8 @@ module.exports = {
       // IBKR Trading Configuration - New Working Gateway  
       IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
       IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
-      IBKR_USERNAME: 'moshe454test',
-      IBKR_PASSWORD: 'Moshe454!',
+      TWS_USERNAME: 'ilyuwc476',
+      TWS_PASSWORD: 'trump123!',
       IBKR_ORDER_DEFAULT_QTY: '1',
       IBKR_ORDER_TIF: 'DAY',
       IBKR_OUTSIDE_RTH: 'false',
