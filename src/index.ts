@@ -159,7 +159,7 @@ app.get('/api/settings', (req: express.Request, res: express.Response) => {
     broker: {
       username: process.env.TRUMP_BOT_IBKR_USERNAME || '',
       password: '***hidden***', // Don't expose password
-      gatewayUrl: process.env.IBKR_GATEWAY_URL || 'https://web-production-a020.up.railway.app',
+      gatewayUrl: process.env.IBKR_GATEWAY_URL || 'http://localhost:5000',
       tradingMode: process.env.TRUMP_BOT_TRADING_MODE || 'paper',
       environment: process.env.TRUMP_BOT_ENVIRONMENT || 'production',
       safeMode: process.env.DISABLE_TRADES === 'true',
@@ -198,7 +198,7 @@ app.post('/api/settings', (req: express.Request, res: express.Response) => {
 app.get('/api/test-connection', async (req: express.Request, res: express.Response) => {
   try {
     const axios = (await import('axios')).default;
-    const railwayUrl = 'https://web-production-a020.up.railway.app';
+    const railwayUrl = 'http://localhost:5000';
     
     // Test Railway connection
     const response = await axios.get(`${railwayUrl}/health`, { timeout: 5000 });
@@ -233,7 +233,7 @@ app.post('/api/test-ibkr', async (req: express.Request, res: express.Response) =
     
     // Test Railway IBKR connection
     const axios = (await import('axios')).default;
-    const railwayUrl = 'https://web-production-a020.up.railway.app';
+    const railwayUrl = 'http://localhost:5000';
     
     try {
       const configResponse = await axios.get(`${railwayUrl}/config`, { timeout: 5000 });

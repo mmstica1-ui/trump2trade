@@ -447,7 +447,7 @@ bot.command('analytics', async (ctx) => {
 bot.command('ibkr_status', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     // Check Railway server health
     const healthResponse = await fetch(`${baseUrl}/health`);
@@ -518,7 +518,7 @@ Safe Mode: ${process.env.DISABLE_TRADES === 'false' ? '🔴 OFF' : '🟢 ON'}`;
 bot.command('ibkr_account', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     try {
       // Get authentication token
@@ -584,7 +584,7 @@ Endpoint: ${baseUrl}/config
 bot.command('ibkr_positions', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     const accountId = process.env.IBKR_ACCOUNT_ID || 'DU1234567';
     
     try {
@@ -653,7 +653,7 @@ Endpoint: ${baseUrl}/trading/positions
 bot.command('ibkr_balance', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     const accountId = process.env.IBKR_ACCOUNT_ID || 'DU1234567';
     
     try {
@@ -749,7 +749,7 @@ bot.command('ibkr_connect', async (ctx) => {
   try {
     await ctx.reply('🔄 <b>Testing Railway IBKR Connection...</b>', { parse_mode: 'HTML' });
     
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     // Check current status
     const healthResponse = await fetch(`${baseUrl}/health`);
@@ -829,7 +829,7 @@ bot.command('load_test', async (ctx) => {
     await ctx.reply('🧪 <b>Starting System Load Test...</b>\n\nTesting all components:', { parse_mode: 'HTML' });
     
     const results = [];
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     // Test 1: Railway Server Health (5 rapid requests)
     let railwaySuccesses = 0;
@@ -893,7 +893,7 @@ ${memMB > 500 ? '• Consider memory optimization\n' : ''}${railwaySuccesses < 4
 bot.command('railway_test', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     await ctx.reply('🚂 <b>Testing Railway Custom Endpoints...</b>', { parse_mode: 'HTML' });
     

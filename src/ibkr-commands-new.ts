@@ -28,7 +28,7 @@ export const ibkrAccountCommand = `
 bot.command('ibkr_account', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     try {
       // Get authentication token
@@ -96,7 +96,7 @@ export const ibkrPositionsCommand = `
 bot.command('ibkr_positions', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     try {
       // Get authentication token
@@ -166,7 +166,7 @@ export const ibkrBalanceCommand = `
 bot.command('ibkr_balance', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     try {
       // Get authentication token
@@ -235,7 +235,7 @@ export const ibkrStatusCommand = `
 bot.command('ibkr_status', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
-    const baseUrl = process.env.IBKR_BASE_URL || 'https://web-production-a020.up.railway.app';
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
     
     // Check Railway server health
     const healthResponse = await fetch(\`\${baseUrl}/health\`);
