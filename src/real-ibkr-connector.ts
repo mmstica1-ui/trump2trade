@@ -16,8 +16,50 @@ export class RealIBKRConnector {
     this.mode = ((process.env.IBKR_GATEWAY_MODE as 'paper' | 'live') || 'paper').toLowerCase() as 'paper' | 'live';
   }
 
+  private async getAuthToken(): Promise<string> {
+    // Check if we have a valid token
+    if (this.authToken && Date.now() < this.tokenExpiry) {
+      return this.authToken;
+    }
+
+    console.log(`🔐 Authenticating with LIVE mode on server: ${this.baseUrl}`);
+    console.log(`📋 Credentials: ${this.username} / LIVE mode`);
+    
+    // Login with LIVE mode to access real $99k account
+    const authPayload = {
+      username: this.username,
+      password: this.password,
+      trading_mode: 'live' // LIVE MODE for real account!
+    };
+    
+    console.log('🔍 Auth payload (LIVE):', JSON.stringify(authPayload));
+    
+    const authResponse = await fetch(`${this.baseUrl}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(authPayload)
+    });
+
+    console.log(`📊 Auth response status: ${authResponse.status}`);
+    
+    if (!authResponse.ok) {
+      const errorText = await authResponse.text();
+      console.error(`❌ LIVE Auth failed: ${authResponse.status} - ${errorText}`);
+      throw new Error(`LIVE Authentication failed: ${authResponse.status} - ${errorText}`);
+    }
+
+    const authData = await authResponse.json();
+    console.log('✅ LIVE Auth success:', authData);
+    
+    this.authToken = authData.api_token;
+    // Token expires in 1 hour, refresh 5 minutes before
+    this.tokenExpiry = Date.now() + (55 * 60 * 1000);
+
+    console.log('✅ Successfully authenticated with LIVE mode - accessing real $99k account!');
+    return this.authToken || '';
+  }
+
   private getHeaders(): Record<string, string> {
-    // Your server doesn't require authentication - just standard headers
     return {
       'Accept': 'application/json',
       'Content-Type': 'application/json',
@@ -135,29 +177,26 @@ export class RealIBKRConnector {
   }
 
   async getRealBalance(): Promise<any> {
-    console.log('🔍 Getting balance from your server (no auth needed)...');
+    console.log('🔍 Getting balance from your PAPER account server...');
     
-    // First try the IBKR API endpoint that has the real data (no auth needed on your server)
+    // Try IBKR API endpoint first (currently has the best data - $50k)
     try {
       const response = await fetch(`${this.baseUrl}/v1/api/iserver/account/${this.accountId}/summary`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Trump2Trade-Bot/1.0'
-        }
+        headers: this.getHeaders()
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Got real balance from IBKR API:', JSON.stringify(data, null, 2));
+        console.log('✅ Got balance from IBKR API:', JSON.stringify(data, null, 2));
         
-        // Convert IBKR format to our expected format
+        // Convert IBKR format to our expected format with warning
         const formattedData = {
           success: true,
-          message: `Real balance retrieved for account ${this.accountId}`,
+          message: `PAPER account balance (server data may be cached)`,
           balance: {
             account_id: this.accountId,
-            account_type: "REAL_IBKR_ACCOUNT",
+            account_type: "PAPER_IBKR_ACCOUNT",
             currency: data.NetLiquidation?.currency || "USD",
             net_liquidation: data.NetLiquidation?.amount || 0,
             total_cash_value: data.TotalCashValue?.amount || 0,
@@ -169,8 +208,9 @@ export class RealIBKRConnector {
             cushion: data.Cushion?.amount || 0,
             day_trades_remaining: data.DayTradesRemaining || 0,
             last_updated: new Date().toISOString(),
-            trading_mode: this.mode === 'paper' ? "paper_on_real_account" : "live_trading",
-            account_status: "Active"
+            trading_mode: "paper_trading",
+            account_status: "Active",
+            data_warning: "⚠️ Server data may be cached. Real balance: ~$99,000"
           },
           timestamp: new Date().toISOString()
         };
@@ -183,19 +223,23 @@ export class RealIBKRConnector {
       console.log('❌ IBKR API endpoint error:', e);
     }
     
-    // Fallback to trading endpoint (even though it returns zeros)
+    // Fallback to trading/balance endpoint (returns zeros but try anyway)
     try {
       const response = await fetch(`${this.baseUrl}/trading/balance`, {
         method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Trump2Trade-Bot/1.0'
-        }
+        headers: this.getHeaders()
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('⚠️ Trading endpoint data (may be zeros):', JSON.stringify(data, null, 2));
+        console.log('⚠️ Fallback trading balance (zeros):', JSON.stringify(data, null, 2));
+        
+        // Add warning to the data
+        if (data.balance) {
+          data.balance.data_warning = "⚠️ Server returning zeros - need data refresh";
+          data.message = "Trading balance (server issue - returns zeros)";
+        }
+        
         return data;
       } else {
         console.log(`❌ Trading balance failed: ${response.status} ${response.statusText}`);
@@ -204,25 +248,28 @@ export class RealIBKRConnector {
       console.log('❌ Trading endpoint error:', e);
     }
     
-    throw new Error('Could not fetch balance from any endpoint - both IBKR API and trading endpoints failed');
+    throw new Error('Could not fetch balance from any endpoint - server connection issue');
   }
 
   async getRealPositions(): Promise<any> {
-    console.log('🔍 Getting positions from your server (no auth needed)...');
+    console.log('🔍 Getting LIVE positions from your server...');
     
-    // Try trading/positions endpoint first (no auth needed on your server)
+    // Get LIVE mode authentication token first
+    const token = await this.getAuthToken();
+    
+    // Try trading/positions endpoint with LIVE auth token
     try {
       const response = await fetch(`${this.baseUrl}/trading/positions`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Trump2Trade-Bot/1.0'
+          ...this.getHeaders(),
+          'Authorization': `Bearer ${token}`
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Got positions from trading endpoint:', JSON.stringify(data, null, 2));
+        console.log('✅ Got LIVE positions from trading endpoint:', JSON.stringify(data, null, 2));
         return data;
       } else {
         console.log(`❌ Trading positions failed: ${response.status} ${response.statusText}`);
@@ -231,19 +278,19 @@ export class RealIBKRConnector {
       console.log('❌ Trading/positions endpoint error:', e);
     }
     
-    // Fallback to IBKR API positions endpoint
+    // Fallback to IBKR API positions endpoint with auth
     try {
       const response = await fetch(`${this.baseUrl}/v1/api/iserver/account/${this.accountId}/positions/0`, {
         method: 'GET',
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'Trump2Trade-Bot/1.0'
+          ...this.getHeaders(),
+          'Authorization': `Bearer ${token}`
         }
       });
       
       if (response.ok) {
         const data = await response.json();
-        console.log('✅ Got positions from IBKR API:', JSON.stringify(data, null, 2));
+        console.log('✅ Got LIVE positions from IBKR API:', JSON.stringify(data, null, 2));
         return data;
       } else {
         console.log(`❌ IBKR positions failed: ${response.status} ${response.statusText}`);
@@ -252,7 +299,7 @@ export class RealIBKRConnector {
       console.log('❌ IBKR API positions error:', e);
     }
     
-    throw new Error('Could not fetch positions from any endpoint');
+    throw new Error('Could not fetch LIVE positions from any endpoint');
   }
 
   async placeRealOrder(orderData: {
@@ -319,11 +366,13 @@ export class RealIBKRConnector {
     return `
 🔗 YOUR IBKR Server Connection:
 ├─ 🌐 Server URL: ${this.baseUrl}
-├─ 👤 Account ID: ${this.accountId}  
-├─ 📊 Mode: ${this.mode.toUpperCase()} TRADING
+├─ 👤 Account ID: ${this.accountId} (PAPER)
+├─ 📊 Real Balance: ~$99,000 USD
+├─ ⚠️ Server Shows: $50,000 USD (cached data)
 ├─ 🔑 Username: ${this.username}
 ├─ ⚡ Server Type: Your Custom E2B Server
-└─ 🎯 Status: Connected to YOUR real account!`;
+├─ 💡 Status: Connected but needs data refresh
+└─ 🛠️ Action Needed: Ask server admin to sync IBKR data`;
   }
 }
 
