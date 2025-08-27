@@ -9,7 +9,7 @@ let healthCheckHandle: any = null;
 
 export function startOpsSelfChecks() {
   const every = Number(process.env.OPS_CHECK_EVERY_MS || '60000');
-  const checkIbkr = false; // Temporarily disabled to avoid spam during server issues
+  const checkIbkr = (process.env.DISABLE_TRADES || '').toLowerCase() !== 'true'; // Re-enabled with new server
   
   if (healthCheckHandle) clearInterval(healthCheckHandle);
   

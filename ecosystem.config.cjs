@@ -24,7 +24,7 @@ module.exports = {
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
       // IBKR Trading Configuration - New Working Gateway  
-      IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
+      IBKR_BASE_URL: 'https://8080-ibu98pd4j6524ljwfdvht.e2b.dev',
       IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
@@ -57,7 +57,7 @@ module.exports = {
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
       // IBKR Trading Configuration - New Working Gateway  
-      IBKR_BASE_URL: 'https://8080-ix8k1qaxvxn9fi89j5kbn.e2b.dev',
+      IBKR_BASE_URL: 'https://8080-ibu98pd4j6524ljwfdvht.e2b.dev',
       IBKR_ACCOUNT_ID: 'DU7428350',  // Your Real Paper Trading Account
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
