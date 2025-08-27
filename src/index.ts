@@ -61,10 +61,20 @@ app.post('/webhook/genspark', handleGensparkWebhook);
 app.get('/webhook/genspark', (_: express.Request, res: express.Response) => 
   res.status(405).json({ ok: false, use: 'POST' }));
 
+// Telegram bot webhook
+app.post('/webhook/telegram', async (req: express.Request, res: express.Response) => {
+  try {
+    await bot.handleUpdate(req.body);
+    res.json({ ok: true });
+  } catch (error: any) {
+    log.error({ error: error?.message || error }, '❌ Telegram webhook error');
+    res.status(500).json({ ok: false });
+  }
+});
+
 // dev helper: test media analysis
 app.post('/dev/media-test', async (req: express.Request, res: express.Response) => {
   const { text, mediaUrls } = req.body || {};
-  
   const { analyzePost } = await import('./llm.js');
   const { sendTrumpAlert } = await import('./tg.js');
   
@@ -280,8 +290,20 @@ app.listen(PORT, async () => {
   initializeDailyAnalytics();
   log.info('Daily analytics system initialized');
   
-  bot.start();
-  monitor.setConnectionStatus('telegram', true);
+  // Initialize bot without starting polling to prevent hanging
+  try {
+    // Delete any existing webhook first
+    await bot.api.deleteWebhook();
+    log.info('🧹 Webhook deleted');
+    
+    // Test bot connectivity
+    const me = await bot.api.getMe();
+    log.info({ botInfo: me }, '✅ Telegram bot initialized successfully');
+    monitor.setConnectionStatus('telegram', true);
+  } catch (botError: any) {
+    log.error({ error: botError?.message || botError }, '❌ Failed to initialize Telegram bot');
+    monitor.setConnectionStatus('telegram', false);
+  }
   
   // Initialize Gemini status check
   const geminiApiKey = process.env.GOOGLE_API_KEY;
@@ -345,4 +367,15 @@ app.listen(PORT, async () => {
       throttleMs: STARTUP_MSG_THROTTLE_MS 
     }, 'Startup message throttled (too soon after last restart)');
   }
+  
+  // Start bot polling in background (non-blocking) - CRITICAL FIX
+  setTimeout(async () => {
+    try {
+      log.info('🤖 Starting Telegram bot polling...');
+      bot.start(); // Start polling asynchronously
+      log.info('✅ Bot polling started');
+    } catch (pollError: any) {
+      log.error({ error: pollError?.message || pollError }, '❌ Failed to start bot polling');
+    }
+  }, 1000);
 });
