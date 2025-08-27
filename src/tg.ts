@@ -487,44 +487,58 @@ bot.command('real_balance', async (ctx) => {
   if (!adminOnly(ctx)) return;
   
   try {
-    await ctx.reply('💰 Getting YOUR real account balance...');
+    await ctx.reply('💰 Accessing YOUR real IBKR account...');
     
-    const { realIBKR } = await import('./real-ibkr-connector.js');
-    const balance = await realIBKR.getRealBalance();
-    const positions = await realIBKR.getRealPositions();
+    // First check if your server is healthy
+    const serverResponse = await fetch(`${process.env.IBKR_BASE_URL}/health`);
+    const serverHealth = await serverResponse.json();
     
-    let message = `💰 <b>YOUR REAL IBKR ACCOUNT BALANCE</b>\n\n`;
-    message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID} (REAL ACCOUNT)\n\n`;
+    if (!serverHealth.ibkr_connected || !serverHealth.trading_ready) {
+      await ctx.reply(`❌ <b>Your IBKR Server Not Ready</b>\n\nServer Status: ${serverHealth.status}\nIBKR Connected: ${serverHealth.ibkr_connected ? '✅' : '❌'}\nTrading Ready: ${serverHealth.trading_ready ? '✅' : '❌'}\n\n🔧 Check your server at: ${process.env.IBKR_BASE_URL}`, { parse_mode: 'HTML' });
+      return;
+    }
     
-    if (balance.NetLiquidation) {
-      message += `💰 <b>Net Liquidation:</b> $${Number(balance.NetLiquidation.amount).toLocaleString()}\n`;
-      message += `💵 <b>Total Cash:</b> $${Number(balance.TotalCashValue?.amount || 0).toLocaleString()}\n`;
-      message += `💪 <b>Buying Power:</b> $${Number(balance.BuyingPower?.amount || 0).toLocaleString()}\n`;
-      message += `📊 <b>Gross Position Value:</b> $${Number(balance.GrossPositionValue?.amount || 0).toLocaleString()}\n\n`;
+    // Try to get real data from your server
+    let message = `💰 <b>YOUR REAL IBKR ACCOUNT</b>\n\n`;
+    message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
+    message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
+    
+    // Check authentication requirement
+    const balanceResponse = await fetch(`${process.env.IBKR_BASE_URL}/trading/balance`);
+    const positionsResponse = await fetch(`${process.env.IBKR_BASE_URL}/trading/positions`);
+    
+    if (balanceResponse.status === 403 || positionsResponse.status === 403) {
+      message += `🔐 <b>Authentication Required</b>\n\n`;
+      message += `Your server requires authentication to access trading data.\n\n`;
+      message += `✅ <b>Server Status:</b>\n`;
+      message += `├─ Health: ${serverHealth.status}\n`;
+      message += `├─ IBKR Connected: ✅\n`;
+      message += `├─ Trading Ready: ✅\n`;
+      message += `└─ Version: ${serverHealth.version}\n\n`;
+      message += `🔧 <b>To Access Real Data:</b>\n`;
+      message += `Configure authentication in your server to allow balance/positions access.\n\n`;
+      message += `📊 <b>Current Integration:</b> Connected to YOUR server ✅`;
+    } else if (balanceResponse.ok && positionsResponse.ok) {
+      // Got real data from your server
+      const balance = await balanceResponse.json();
+      const positions = await positionsResponse.json();
       
-      // Calculate total P&L from positions
-      let totalPnL = 0;
-      if (Array.isArray(positions)) {
-        totalPnL = positions.reduce((sum: number, pos: any) => sum + (pos.unrealizedPnl || 0), 0);
-      }
-      
-      const pnlIcon = totalPnL >= 0 ? '📈' : '📉';
-      message += `${pnlIcon} <b>Unrealized P&L:</b> ${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}\n\n`;
-      
-      message += `✅ <b>REAL ACCOUNT VERIFIED:</b>\n`;
-      message += `🎯 This is YOUR actual IBKR data\n`;
-      message += `❌ This is NOT demo/fake data\n`;
-      message += `🔗 Live connection to IBKR servers`;
-      
+      message += `💰 <b>Balance Data:</b>\n`;
+      message += `${JSON.stringify(balance, null, 2)}\n\n`;
+      message += `📊 <b>Positions Data:</b>\n`;
+      message += `${JSON.stringify(positions, null, 2)}\n\n`;
+      message += `✅ <b>Real data from YOUR server!</b>`;
     } else {
-      message += `❌ Could not fetch balance data\n`;
-      message += `Check connection with /connect_real_ibkr`;
+      message += `❌ <b>Data Access Error</b>\n\n`;
+      message += `Balance endpoint: ${balanceResponse.status}\n`;
+      message += `Positions endpoint: ${positionsResponse.status}\n\n`;
+      message += `🔧 Check your server API endpoints`;
     }
     
     await ctx.reply(message, { parse_mode: 'HTML' });
     
   } catch (error: any) {
-    await ctx.reply(`❌ Real balance error: ${error?.message || error}\n\n🔧 Try: /connect_real_ibkr first`);
+    await ctx.reply(`❌ Connection error: ${error?.message || error}\n\n🔧 Check server: ${process.env.IBKR_BASE_URL}`);
   }
 });
 
@@ -537,50 +551,53 @@ bot.command('real_positions', async (ctx) => {
     const { realIBKR } = await import('./real-ibkr-connector.js');
     const positions = await realIBKR.getRealPositions();
     
-    let message = `📊 <b>YOUR REAL PORTFOLIO POSITIONS</b>\n\n`;
-    message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID} (REAL ACCOUNT)\n\n`;
+    // First check if your server is healthy
+    const serverResponse = await fetch(`${process.env.IBKR_BASE_URL}/health`);
+    const serverHealth = await serverResponse.json();
     
-    if (positions && Array.isArray(positions) && positions.length > 0) {
-      message += `✅ <b>Active Positions (${positions.length}):</b>\n\n`;
+    if (!serverHealth.ibkr_connected || !serverHealth.trading_ready) {
+      await ctx.reply(`❌ <b>Your IBKR Server Not Ready</b>\n\nServer Status: ${serverHealth.status}\nIBKR Connected: ${serverHealth.ibkr_connected ? '✅' : '❌'}\nTrading Ready: ${serverHealth.trading_ready ? '✅' : '❌'}`, { parse_mode: 'HTML' });
+      return;
+    }
+    
+    // Try to get real positions from your server
+    let message = `📊 <b>YOUR REAL PORTFOLIO</b>\n\n`;
+    message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
+    message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
+    
+    const positionsResponse = await fetch(`${process.env.IBKR_BASE_URL}/trading/positions`);
+    
+    if (positionsResponse.status === 403) {
+      message += `🔐 <b>Authentication Required</b>\n\n`;
+      message += `Your server requires authentication to access positions data.\n\n`;
+      message += `✅ <b>Server Connected:</b>\n`;
+      message += `├─ Health: ${serverHealth.status}\n`;
+      message += `├─ IBKR Connected: ✅\n`;
+      message += `├─ Trading Ready: ✅\n`;
+      message += `└─ Version: ${serverHealth.version}\n\n`;
+      message += `🔧 Configure authentication in your server for positions access.`;
+    } else if (positionsResponse.ok) {
+      // Got real positions from your server
+      const positions = await positionsResponse.json();
       
-      let totalValue = 0;
-      let totalPnL = 0;
+      message += `📊 <b>Live Positions Data:</b>\n\n`;
       
-      positions.forEach((pos: any, index: number) => {
-        const pnl = Number(pos.unrealizedPnl || 0);
-        const marketValue = Number(pos.mktValue || 0);
-        const quantity = Number(pos.position || 0);
-        const price = Number(pos.mktPrice || 0);
-        
-        totalValue += Math.abs(marketValue);
-        totalPnL += pnl;
-        
-        const pnlIcon = pnl >= 0 ? '📈' : '📉';
-        const positionType = quantity > 0 ? 'LONG' : 'SHORT';
-        const positionIcon = quantity > 0 ? '🟢' : '🔴';
-        
-        message += `${index + 1}. ${positionIcon} <b>${pos.ticker || pos.contractDesc}</b> (${positionType})\n`;
-        message += `├─ Shares: ${Math.abs(quantity)} ${quantity > 0 ? 'owned' : 'short'}\n`;
-        message += `├─ Current Price: $${price.toFixed(2)}\n`;
-        message += `├─ Avg Cost: $${Number(pos.avgPrice || 0).toFixed(2)}\n`;
-        message += `├─ Market Value: $${Math.abs(marketValue).toLocaleString()}\n`;
-        message += `└─ ${pnlIcon} P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}\n\n`;
-      });
+      if (positions && Array.isArray(positions) && positions.length > 0) {
+        message += `Found ${positions.length} position(s):\n\n`;
+        positions.forEach((pos: any, index: number) => {
+          message += `${index + 1}. ${JSON.stringify(pos, null, 2)}\n\n`;
+        });
+      } else if (positions && typeof positions === 'object') {
+        message += `Positions response:\n${JSON.stringify(positions, null, 2)}\n\n`;
+      } else {
+        message += `No active positions found in your account.\n\n`;
+      }
       
-      message += `💰 <b>Portfolio Summary:</b>\n`;
-      message += `├─ Total Positions: ${positions.length}\n`;
-      message += `├─ Total Market Value: $${totalValue.toLocaleString()}\n`;
-      message += `└─ Total Unrealized P&L: ${totalPnL >= 0 ? '+' : ''}$${totalPnL.toFixed(2)}\n\n`;
-      
-      message += `✅ <b>REAL PORTFOLIO VERIFIED:</b>\n`;
-      message += `🎯 These are YOUR actual positions\n`;
-      message += `🔗 Live data from IBKR servers`;
-      
+      message += `✅ <b>Real data from YOUR server!</b>`;
     } else {
-      message += `📈 <b>No Open Positions</b>\n\n`;
-      message += `✅ Your account is ready for trading\n`;
-      message += `💡 Portfolio currently empty or positions closed\n\n`;
-      message += `🔗 Connected to YOUR real IBKR account`;
+      message += `❌ <b>Positions Access Error</b>\n\n`;
+      message += `Status: ${positionsResponse.status}\n`;
+      message += `Check your server API configuration.`;
     }
     
     await ctx.reply(message, { parse_mode: 'HTML' });
