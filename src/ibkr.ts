@@ -14,9 +14,20 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   if ((process.env.DISABLE_TRADES || '').toLowerCase() === 'true') {
     return '🧪 Preview mode is ON (DISABLE_TRADES=true). No orders will be sent.';
   }
+  
+  // Check if IBKR Gateway is accessible
+  if (!base || !acct) {
+    return '❗️ IBKR configuration missing. Please set IBKR_BASE_URL and IBKR_ACCOUNT_ID.';
+  }
+  
+  // Check IBKR Gateway mode
+  if (process.env.IBKR_GATEWAY_MODE === 'SIMULATION' || !await isIbkrGatewayRunning()) {
+    return simulateIbkrTrade(p);
+  }
+  
   if (p.a === 'preview') return 'No trade. This is a dry run.';
   if (p.a === 'manual_trade') {
-    const manualTradingUrl = process.env.MANUAL_TRADING_URL || 'https://your-trading-platform.com';
+    const manualTradingUrl = process.env.MANUAL_TRADING_URL || 'https://ndcdyn.interactivebrokers.com/portal.proxy/v1/portal/';
     return `📈 Manual Trading: ${manualTradingUrl}\n\n🎯 Use this link to execute trades manually on your preferred platform.`;
   }
   if (!p.t) throw new Error('Missing ticker');
@@ -95,4 +106,57 @@ async function placeMarketOptionOrder(optionConid: number, side: 'BUY'|'SELL') {
   };
   const r = await axios.post(`${base}/iserver/account/${acct}/orders`, body, { httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
   return Array.isArray(r.data) ? r.data[0] : r.data;
+}
+
+async function isIbkrGatewayRunning(): Promise<boolean> {
+  try {
+    const r = await axios.get(`${base}/iserver/auth/status`, { 
+      httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+      timeout: 5000
+    });
+    return r.status === 200 && r.data?.authenticated === true;
+  } catch (error: any) {
+    console.log(`❌ IBKR Gateway not accessible: ${error.message}`);
+    return false;
+  }
+}
+
+function simulateIbkrTrade(p: InlineTradePayload): string {
+  if (!p.t) throw new Error('Missing ticker');
+  
+  const isBuy = p.a?.startsWith('buy');
+  const isCall = p.a?.endsWith('call');
+  const side = isBuy ? 'BUY' : 'SELL';
+  const type = isCall ? 'CALL' : 'PUT';
+  
+  // Simulate realistic option parameters
+  const mockPrice = Math.random() * 500 + 50; // $50-550
+  const mockStrike = Math.round(mockPrice * (isCall ? 1.005 : 0.995));
+  const mockExpiry = getNextFriday();
+  const mockOrderId = `SIM${Date.now()}`;
+  
+  return `🧪 <b>SIMULATION MODE</b>
+  
+✅ ${side} ${type} ${p.t} ${mockExpiry} $${mockStrike} x${qty}
+📊 Estimated Price: $${mockPrice.toFixed(2)}
+🎯 Strike: $${mockStrike}
+📅 Expiry: ${mockExpiry}
+🆔 Order ID: ${mockOrderId}
+
+⚠️ <b>This is a simulated trade!</b>
+🔧 To enable real trading:
+• Set up IBKR Gateway properly
+• Change IBKR_GATEWAY_MODE to 'REAL'
+• Ensure Gateway is authenticated
+
+💡 Manual Trading: ${process.env.MANUAL_TRADING_URL}`;
+}
+
+function getNextFriday(): string {
+  const today = new Date();
+  const dayOfWeek = today.getDay();
+  const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7; // Next Friday
+  const nextFriday = new Date(today);
+  nextFriday.setDate(today.getDate() + daysUntilFriday);
+  return nextFriday.toISOString().split('T')[0];
 }

@@ -16,15 +16,23 @@ module.exports = {
       TELEGRAM_CHAT_ID: '540751833',
       TELEGRAM_GROUP_CHAT_ID: '',
       // Gemini (Google)
-      GOOGLE_API_KEY: 'DEVELOPMENT_MOCK_MODE',
+      GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
       GEMINI_MODEL: 'gemini-1.5-flash',
       // SYNOPTIC
       SYNOPTIC_API_KEY: '1f082681-21a2-6b80-bf48-2c16d80faa8e',
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
+      // IBKR Trading Configuration (Need real Gateway setup)
+      IBKR_BASE_URL: 'http://localhost:5000',  // Will need real Gateway
+      IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
+      IBKR_ORDER_DEFAULT_QTY: '1',
+      IBKR_ORDER_TIF: 'DAY',
+      IBKR_OUTSIDE_RTH: 'false',
+      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/portal.proxy/v1/portal/',
+      IBKR_GATEWAY_MODE: 'SIMULATION',  // SIMULATION or REAL
       // Safety
-      DISABLE_TRADES: 'true',
+      DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',
       // Poller
       POLL_ENABLED: 'false',
@@ -39,15 +47,23 @@ module.exports = {
       TELEGRAM_CHAT_ID: '540751833',
       TELEGRAM_GROUP_CHAT_ID: '',
       // Gemini (Google)
-      GOOGLE_API_KEY: 'DEVELOPMENT_MOCK_MODE',
+      GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
       GEMINI_MODEL: 'gemini-1.5-flash',
       // SYNOPTIC
       SYNOPTIC_API_KEY: '1f082681-21a2-6b80-bf48-2c16d80faa8e',
       // Webhooks
       APIFY_WEBHOOK_SECRET: 'moshe454',
       GENSPARK_WEBHOOK_SECRET: 'moshe454',
+      // IBKR Trading Configuration (Need real Gateway setup)
+      IBKR_BASE_URL: 'http://localhost:5000',  // Will need real Gateway
+      IBKR_ACCOUNT_ID: 'DU1234567',  // Your Paper Trading Account
+      IBKR_ORDER_DEFAULT_QTY: '1',
+      IBKR_ORDER_TIF: 'DAY',
+      IBKR_OUTSIDE_RTH: 'false',
+      MANUAL_TRADING_URL: 'https://ndcdyn.interactivebrokers.com/portal.proxy/v1/portal/',
+      IBKR_GATEWAY_MODE: 'SIMULATION',  // SIMULATION or REAL
       // Safety
-      DISABLE_TRADES: 'true',
+      DISABLE_TRADES: 'false',
       OPS_CHECK_EVERY_MS: '60000',
       // Poller
       POLL_ENABLED: 'false',

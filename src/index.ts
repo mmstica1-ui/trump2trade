@@ -8,17 +8,30 @@ import { initializeDailyAnalytics } from './daily-analytics.js';
 const requiredEnvVars = {
   TELEGRAM_BOT_TOKEN: process.env.TELEGRAM_BOT_TOKEN,
   TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID,
+  GOOGLE_API_KEY: process.env.GOOGLE_API_KEY,
+  IBKR_BASE_URL: process.env.IBKR_BASE_URL,
+  IBKR_ACCOUNT_ID: process.env.IBKR_ACCOUNT_ID,
 };
 
 // Check critical environment variables
 const missingVars = Object.entries(requiredEnvVars)
-  .filter(([key, value]) => !value || value === `your-${key.toLowerCase().replace('_', '-')}-here`)
+  .filter(([key, value]) => !value || value === `your-${key.toLowerCase().replace('_', '-')}-here` || value === 'DEVELOPMENT_MOCK_MODE')
   .map(([key]) => key);
 
 if (missingVars.length > 0) {
-  console.warn(`⚠️  Missing environment variables: ${missingVars.join(', ')}`);
-  console.warn('System will run in limited mode. Set proper values for full functionality.');
+  console.warn(`🚨 CRITICAL: Missing environment variables: ${missingVars.join(', ')}`);
+  console.warn('⚠️  IBKR Trading will NOT work without proper configuration!');
+  console.warn('📋 Check ecosystem.config.cjs and .env.production files');
 }
+
+// Configuration validation logging
+console.log(`🔧 Configuration Status:`);
+console.log(`   Telegram: ${process.env.TELEGRAM_BOT_TOKEN ? '✅ Configured' : '❌ Missing'}`);
+console.log(`   Gemini AI: ${process.env.GOOGLE_API_KEY && process.env.GOOGLE_API_KEY !== 'DEVELOPMENT_MOCK_MODE' ? '✅ Real API' : '🧪 Mock Mode'}`);
+console.log(`   IBKR Gateway: ${process.env.IBKR_BASE_URL ? '✅ Configured' : '❌ Missing'}`);
+console.log(`   IBKR Account: ${process.env.IBKR_ACCOUNT_ID ? '✅ Configured' : '❌ Missing'}`);
+console.log(`   Trading: ${process.env.DISABLE_TRADES === 'false' ? '✅ ENABLED' : '🛡️ DISABLED (Safe Mode)'}`);
+console.log(`   ────────────────────────────────────────`);
 import bot, { sendText } from './tg.js';
 import { scheduleDailyStats } from './stats.js';
 import { startOpsSelfChecks } from './ops.js';
