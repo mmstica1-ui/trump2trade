@@ -513,7 +513,25 @@ bot.command('real_balance', async (ctx) => {
       
       message += `💰 <b>Account Balance:</b>\n\n`;
       
-      if (balance && balance.balance) {
+      // Handle both IBKR API format and trading endpoint format
+      if (balance && balance.NetLiquidation) {
+        // IBKR API format
+        message += `💵 <b>Net Liquidation:</b> $${Number(balance.NetLiquidation.amount || 0).toLocaleString()}\n`;
+        message += `💰 <b>Total Cash:</b> $${Number(balance.TotalCashValue?.amount || 0).toLocaleString()}\n`;
+        message += `💪 <b>Buying Power:</b> $${Number(balance.BuyingPower?.amount || 0).toLocaleString()}\n`;
+        message += `📊 <b>Gross Position Value:</b> $${Number(balance.GrossPositionValue?.amount || 0).toLocaleString()}\n\n`;
+        
+        message += `💱 <b>Currency:</b> ${balance.NetLiquidation.currency || 'USD'}\n`;
+        message += `📋 <b>Data Source:</b> IBKR API (Real Data)\n\n`;
+        
+        const netLiq = Number(balance.NetLiquidation.amount || 0);
+        if (netLiq > 0) {
+          message += `✅ <b>Account Status:</b> Funded and active\n`;
+        } else {
+          message += `ℹ️ <b>Account Status:</b> No funds or positions\n`;
+        }
+      } else if (balance && balance.balance) {
+        // Trading endpoint format  
         const bal = balance.balance;
         message += `💵 <b>Net Liquidation:</b> $${Number(bal.net_liquidation || 0).toLocaleString()}\n`;
         message += `💰 <b>Total Cash:</b> $${Number(bal.total_cash_value || 0).toLocaleString()}\n`;
@@ -525,15 +543,11 @@ bot.command('real_balance', async (ctx) => {
         message += `${pnlIcon} <b>Unrealized P&L:</b> ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}\n\n`;
         
         message += `📋 <b>Account Details:</b>\n`;
-        message += `├─ Account Type: ${bal.account_type}\n`;
-        message += `├─ Trading Mode: ${bal.trading_mode}\n`;
-        message += `├─ Account Status: ${bal.account_status}\n`;
-        message += `├─ Currency: ${bal.currency}\n`;
-        message += `└─ Last Updated: ${bal.last_updated}\n\n`;
-        
-        if (bal.net_liquidation === 0 && bal.total_cash_value === 0) {
-          message += `ℹ️ <b>Account Status:</b> Empty account or no funds deposited\n`;
-        }
+        message += `├─ Type: ${bal.account_type}\n`;
+        message += `├─ Mode: ${bal.trading_mode}\n`;
+        message += `├─ Status: ${bal.account_status}\n`;
+        message += `└─ Currency: ${bal.currency}\n\n`;
+        message += `📋 <b>Data Source:</b> Trading API\n`;
       } else {
         message += `Raw balance data:\n${JSON.stringify(balance, null, 2)}\n\n`;
       }
@@ -704,26 +718,22 @@ bot.command('ibkr_balance', async (ctx) => {
       message += `🎯 <b>Account:</b> ${process.env.IBKR_ACCOUNT_ID}\n`;
       message += `🌐 <b>Server:</b> ${process.env.IBKR_BASE_URL}\n\n`;
       
-      if (balance && balance.balance) {
+      // Handle both data formats
+      if (balance && balance.NetLiquidation) {
+        // IBKR API format
+        message += `💵 <b>Net Liquidation:</b> $${Number(balance.NetLiquidation.amount || 0).toLocaleString()}\n`;
+        message += `💰 <b>Total Cash:</b> $${Number(balance.TotalCashValue?.amount || 0).toLocaleString()}\n`;
+        message += `💪 <b>Buying Power:</b> $${Number(balance.BuyingPower?.amount || 0).toLocaleString()}\n`;
+        message += `📊 <b>Gross Position Value:</b> $${Number(balance.GrossPositionValue?.amount || 0).toLocaleString()}\n\n`;
+        message += `💱 <b>Currency:</b> ${balance.NetLiquidation.currency || 'USD'}\n\n`;
+      } else if (balance && balance.balance) {
+        // Trading endpoint format
         const bal = balance.balance;
         message += `💵 <b>Net Liquidation:</b> $${Number(bal.net_liquidation || 0).toLocaleString()}\n`;
         message += `💰 <b>Total Cash:</b> $${Number(bal.total_cash_value || 0).toLocaleString()}\n`;
         message += `💪 <b>Buying Power:</b> $${Number(bal.buying_power || 0).toLocaleString()}\n`;
         message += `📊 <b>Gross Position Value:</b> $${Number(bal.gross_position_value || 0).toLocaleString()}\n\n`;
-        
-        const pnl = Number(bal.unrealized_pnl || 0);
-        const pnlIcon = pnl >= 0 ? '📈' : '📉';
-        message += `${pnlIcon} <b>Unrealized P&L:</b> ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)}\n\n`;
-        
-        message += `📋 <b>Account Info:</b>\n`;
-        message += `├─ Type: ${bal.account_type}\n`;
-        message += `├─ Trading Mode: ${bal.trading_mode}\n`;
-        message += `├─ Status: ${bal.account_status}\n`;
-        message += `└─ Currency: ${bal.currency}\n\n`;
-        
-        if (bal.net_liquidation === 0 && bal.total_cash_value === 0) {
-          message += `ℹ️ <b>Note:</b> Account appears empty - no funds currently deposited\n`;
-        }
+        message += `📋 <b>Details:</b>\n├─ Type: ${bal.account_type}\n├─ Mode: ${bal.trading_mode}\n└─ Status: ${bal.account_status}\n\n`;
       } else {
         message += `Balance data: ${JSON.stringify(balance, null, 2)}\n\n`;
       }
