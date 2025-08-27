@@ -344,6 +344,7 @@ bot.command('help', async (ctx) => {
 
 🏦 <b>IBKR Trading:</b>
 /ibkr_status - Connection status
+/ibkr_check_server - Check which account server shows
 /ibkr_account - Account details
 /ibkr_positions - Current positions  
 /ibkr_balance - Account balance
@@ -1024,6 +1025,37 @@ ${memUsage.rss > 500 * 1024 * 1024 ? '⚠️ High memory usage detected' : '✅ 
     await ctx.reply(message, { parse_mode: 'HTML' });
   } catch (error: any) {
     await ctx.reply(`❌ Health check error: ${error?.message || error}`);
+  }
+});
+
+// Simple command to check which account the server shows
+bot.command('ibkr_check_server', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const baseUrl = process.env.IBKR_BASE_URL || 'http://localhost:5000';
+    const myAccountId = process.env.IBKR_ACCOUNT_ID || 'DU7428350';
+    
+    const response = await fetch(`${baseUrl}/v1/api/iserver/accounts`);
+    const data = await response.json();
+    
+    const serverAccount = data.accounts && data.accounts[0];
+    const isCorrect = serverAccount === myAccountId;
+    
+    let message = '🔍 <b>IBKR Server Account Check</b>\n\n';
+    message += `🎯 <b>Your Account:</b> ${myAccountId}\n`;
+    message += `📡 <b>Server Shows:</b> ${serverAccount || 'Unknown'}\n`;
+    message += `${isCorrect ? '✅' : '❌'} <b>Status:</b> ${isCorrect ? 'CORRECT - Server configured for your real account!' : 'WRONG - Server still shows demo account!'}\n\n`;
+    
+    if (!isCorrect) {
+      message += '💡 <b>Next Step:</b>\n';
+      message += 'Run server configuration commands to fix this.\n';
+      message += 'Check files: CONFIGURE_REAL_ACCOUNT.sh or SIMPLE_FIX.sh';
+    }
+    
+    await ctx.reply(message, { parse_mode: 'HTML' });
+    
+  } catch (error: any) {
+    await ctx.reply('❌ Check failed: ' + (error?.message || error));
   }
 });
 
