@@ -8,6 +8,32 @@ const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
 const chatId = process.env.TELEGRAM_CHAT_ID!;
 
+// Add global error handler for bot
+bot.catch((err: any) => {
+  console.error('🚨 Bot error caught:', err);
+  
+  // Handle Markdown parsing errors specifically
+  if (err.message && err.message.includes("can't parse entities")) {
+    console.log('⚠️  Ignoring Markdown parsing error from old cached command');
+    return;
+  }
+  
+  // Handle Grammy BotError with Telegram API errors
+  if (err.error && err.error.error_code) {
+    console.error(`❌ Telegram API error ${err.error.error_code}: ${err.error.description}`);
+    return;
+  }
+  
+  // Handle direct error_code (different error format)
+  if (err.error_code) {
+    console.error(`❌ Telegram API error ${err.error_code}: ${err.description}`);
+    return;
+  }
+  
+  // Log other errors but don't crash
+  console.error('❌ Unhandled bot error:', err);
+});
+
 // Support multiple chat IDs for both personal chat and group
 function getAllChatIds(): string[] {
   const chatIds = [chatId]; // Always include the main chat
@@ -78,30 +104,46 @@ export async function sendTrumpAlert(args: {
     const t = ticker.symbol;
     if (ticker.impact === 'positive') {
       // For bullish tickers: Call buttons with percentages (recommended first)
-      kb.text(`🟢 Call ${t} 0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
-      kb.text(`🟢 Call ${t} 1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
-      kb.text(`🟢 Call ${t} 2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' })).row();
-      kb.text(`🔴 Put ${t} 0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
-      kb.text(`🔴 Put ${t} 1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
-      kb.text(`🔴 Put ${t} 2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' })).row();
+      kb.text(`🟢 ${t} C0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
+      kb.text(`🟢 ${t} C1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
+      kb.text(`🟢 ${t} C1.5%`, JSON.stringify({ a: 'buy_call', t, pct: '1.5' })).row();
+      kb.text(`🟢 ${t} C2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' }));
+      kb.text(`🟢 ${t} C3%`, JSON.stringify({ a: 'buy_call', t, pct: '3' })).row();
+      kb.text(`🔴 ${t} P0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
+      kb.text(`🔴 ${t} P1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
+      kb.text(`🔴 ${t} P1.5%`, JSON.stringify({ a: 'buy_put', t, pct: '1.5' })).row();
+      kb.text(`🔴 ${t} P2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' }));
+      kb.text(`🔴 ${t} P3%`, JSON.stringify({ a: 'buy_put', t, pct: '3' })).row();
     } else if (ticker.impact === 'negative') {
       // For bearish tickers: Put buttons first (recommended)
-      kb.text(`🔴 Put ${t} 0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
-      kb.text(`🔴 Put ${t} 1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
-      kb.text(`🔴 Put ${t} 2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' })).row();
-      kb.text(`🟢 Call ${t} 0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
-      kb.text(`🟢 Call ${t} 1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
-      kb.text(`🟢 Call ${t} 2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' })).row();
+      kb.text(`🔴 ${t} P0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
+      kb.text(`🔴 ${t} P1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
+      kb.text(`🔴 ${t} P1.5%`, JSON.stringify({ a: 'buy_put', t, pct: '1.5' })).row();
+      kb.text(`🔴 ${t} P2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' }));
+      kb.text(`🔴 ${t} P3%`, JSON.stringify({ a: 'buy_put', t, pct: '3' })).row();
+      kb.text(`🟢 ${t} C0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
+      kb.text(`🟢 ${t} C1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
+      kb.text(`🟢 ${t} C1.5%`, JSON.stringify({ a: 'buy_call', t, pct: '1.5' })).row();
+      kb.text(`🟢 ${t} C2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' }));
+      kb.text(`🟢 ${t} C3%`, JSON.stringify({ a: 'buy_call', t, pct: '3' })).row();
     } else {
-      // Neutral: standard 1% strike buttons
-      kb.text(`🟢 Call ${t} 1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
-      kb.text(`🔴 Put ${t} 1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' })).row();
+      // Neutral: all percentage options
+      kb.text(`🟢 ${t} C0.5%`, JSON.stringify({ a: 'buy_call', t, pct: '0.5' }));
+      kb.text(`🟢 ${t} C1%`, JSON.stringify({ a: 'buy_call', t, pct: '1' }));
+      kb.text(`🟢 ${t} C1.5%`, JSON.stringify({ a: 'buy_call', t, pct: '1.5' })).row();
+      kb.text(`🟢 ${t} C2%`, JSON.stringify({ a: 'buy_call', t, pct: '2' }));
+      kb.text(`🟢 ${t} C3%`, JSON.stringify({ a: 'buy_call', t, pct: '3' })).row();
+      kb.text(`🔴 ${t} P0.5%`, JSON.stringify({ a: 'buy_put', t, pct: '0.5' }));
+      kb.text(`🔴 ${t} P1%`, JSON.stringify({ a: 'buy_put', t, pct: '1' }));
+      kb.text(`🔴 ${t} P1.5%`, JSON.stringify({ a: 'buy_put', t, pct: '1.5' })).row();
+      kb.text(`🔴 ${t} P2%`, JSON.stringify({ a: 'buy_put', t, pct: '2' }));
+      kb.text(`🔴 ${t} P3%`, JSON.stringify({ a: 'buy_put', t, pct: '3' })).row();
     }
   }
   
-  // Add manual trading button and preview button
-  kb.text('💼 Manual Trading', JSON.stringify({ a: 'manual_trade' }));
-  kb.text('👁️ Preview (no trade)', JSON.stringify({ a: 'preview' })).row();
+  // Add manual trading button and preview button - mobile optimized
+  kb.text('🛠 Manual', JSON.stringify({ a: 'manual_trade' }));
+  kb.text('👁 Preview', JSON.stringify({ a: 'preview' })).row();
   
   // Add prominent link button to original post
   kb.url('🔗 View Original Post', args.url).row();
@@ -233,46 +275,40 @@ export async function sendTrumpAlert(args: {
   return results[0]; // Return first result for compatibility
 }
 
+// Add debugging for all messages
+bot.on('message', (ctx) => {
+  console.log('📨 Bot received message:', ctx.message.text, 'from:', ctx.from?.username);
+  console.log('📨 Full message object:', JSON.stringify(ctx.message, null, 2));
+});
+
 bot.command('help', async (ctx) => {
-  const helpMessage = `🤖 <b>TRUMP2TRADE BOT - REAL IBKR TRADING</b>
+  console.log('✅ HELP command received from:', ctx.from?.username);
+  console.log('🔧 Processing help command...');
+  const helpMessage = `🤖 <b>TRUMP2TRADE BOT - PROFESSIONAL TRADING SYSTEM</b>
 
 📊 <b>System Commands:</b>
 /help - Show this help menu
 /ping - Test bot connectivity  
 /status - System status
-/health - Health diagnostics
-/monitor - System monitoring
-/daily - Daily report
-/analytics - Performance analytics
+/check - Run full diagnostics
 
 ⚙️ <b>Control Commands:</b>
 /safe_mode on|off - Toggle safe mode
 /system on|off - System control
-/check - Full diagnostics
 
-🔥 <b>REAL IBKR CONNECTION:</b>
-/connect_real_ibkr - Connect to YOUR real IBKR account
-/real_balance - YOUR real account balance  
-/real_positions - YOUR real portfolio positions
-/ibkr_balance - Same as /real_balance (shortcut)
-/ibkr_positions - Same as /real_positions (shortcut)
-/place_real_order - Execute REAL orders
+📱 <b>Trading Buttons:</b>
+🟢 TSLA C1 = Call TSLA 1% OTM
+🔴 TSLA P2 = Put TSLA 2% OTM
 
-📈 <b>Order Format:</b>
-<code>/place_real_order TSLA BUY 10</code> (Market order)
-<code>/place_real_order AAPL SELL 5 450.00</code> (Limit order)
+💰 <b>Account:</b> Paper Trading ($99,216.72)`;
 
-⚠️ <b>IMPORTANT:</b>
-- Real orders execute on your actual IBKR account
-- Make sure TWS/Gateway is running on your computer
-- Test connection first with /connect_real_ibkr
-
-🛡️ <b>Safety:</b> Set DISABLE_TRADES=true to prevent accidental orders
-
-━━━━━━━━━━━━━━━━━━━━━
-🎯 <b>Ready for real Trump → IBKR trading!</b>`;
-
-  await ctx.reply(helpMessage, { parse_mode: 'HTML' });
+  try {
+    console.log('📤 Sending help message...');
+    await ctx.reply(helpMessage, { parse_mode: 'HTML' });
+    console.log('✅ Help message sent successfully!');
+  } catch (error) {
+    console.error('❌ Error sending help message:', error);
+  }
 });
 bot.command('ping', ctx => ctx.reply('pong'));
 

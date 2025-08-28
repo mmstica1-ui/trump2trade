@@ -12,9 +12,9 @@ interface ServerConfig {
 export class IBKRFallbackSystem {
   private servers: ServerConfig[] = [
     {
-      url: 'https://web-production-a020.up.railway.app',
+      url: 'https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev',
       priority: 1,
-      name: 'Railway Primary',
+      name: 'New IBKR Server',
       active: true,
       consecutiveFailures: 0
     }

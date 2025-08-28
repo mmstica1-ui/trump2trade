@@ -148,18 +148,21 @@ class SystemMonitor {
 
   public getSystemHealth(): SystemHealth {
     const memUsage = process.memoryUsage();
-    const memPercentage = (memUsage.heapUsed / memUsage.heapTotal) * 100;
+    // Fix memory calculation: use RSS (real memory usage) vs available system memory
+    const totalSystemMB = 1000; // ~1GB typical sandbox memory
+    const usedMemoryMB = memUsage.rss / 1024 / 1024;
+    const memPercentage = Math.min((usedMemoryMB / totalSystemMB) * 100, 100);
     
     let status: 'healthy' | 'warning' | 'critical' = 'healthy';
     
-    // Determine status with realistic memory thresholds for our system
+    // Use more realistic thresholds for actual memory usage
     const recentCriticalErrors = this.recentErrors.filter(e => 
       Date.now() - e.timestamp.getTime() < 5 * 60 * 1000).length;
     
-    if (memPercentage > 99 || recentCriticalErrors > 10) {
+    if (usedMemoryMB > 800 || recentCriticalErrors > 10) { // 800MB+ is critical
       status = 'critical';
-    } else if (memPercentage > 97 || 
-               !this.connections.telegram ||
+    } else if (usedMemoryMB > 500 || // 500MB+ is warning
+               !this.connections.synoptic || // SYNOPTIC is critical, not telegram
                recentCriticalErrors > 3 ||
                (this.lastPostTime && Date.now() - this.lastPostTime.getTime() > 60 * 60 * 1000)) {
       status = 'warning';  
@@ -169,8 +172,8 @@ class SystemMonitor {
       status,
       uptime: Date.now() - this.startTime,
       memory: {
-        used: memUsage.heapUsed,
-        total: memUsage.heapTotal,
+        used: memUsage.rss,
+        total: totalSystemMB * 1024 * 1024,
         percentage: Math.round(memPercentage)
       },
       connections: { ...this.connections },

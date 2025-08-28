@@ -11,6 +11,7 @@ module.exports = {
     env: {
       NODE_ENV: 'development',
       PORT: 8080,
+      APP_URL: 'https://8080-irhizl816o5wh84wzp5re.e2b.dev',
       // Telegram
       TELEGRAM_BOT_TOKEN: '7597128133:AAGtGl22gep4b3tfokrEPVOPgOcmdjSTLes',
       TELEGRAM_CHAT_ID: '540751833',
@@ -18,9 +19,9 @@ module.exports = {
       // Gemini (Google)
       GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
       GEMINI_MODEL: 'gemini-1.5-flash',
-      // IBKR Trading (YOUR REAL SERVER)
-      IBKR_BASE_URL: 'https://8080-ibu98pd4j6524ljwfdvht.e2b.dev',
-      IBKR_ACCOUNT_ID: 'DU7428350',
+      // IBKR Trading (New Railway Server - Updated)
+      IBKR_BASE_URL: 'https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev',
+      IBKR_ACCOUNT_ID: 'DUA065113',
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
       IBKR_ORDER_DEFAULT_QTY: '1',
@@ -44,6 +45,7 @@ module.exports = {
     env_production: {
       NODE_ENV: 'production',
       PORT: 8080,
+      APP_URL: 'https://8080-irhizl816o5wh84wzp5re.e2b.dev',
       // Telegram
       TELEGRAM_BOT_TOKEN: '7597128133:AAGtGl22gep4b3tfokrEPVOPgOcmdjSTLes',
       TELEGRAM_CHAT_ID: '540751833',
@@ -51,9 +53,9 @@ module.exports = {
       // Gemini (Google)
       GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
       GEMINI_MODEL: 'gemini-1.5-flash',
-      // IBKR Trading (YOUR REAL SERVER)
-      IBKR_BASE_URL: 'https://8080-ibu98pd4j6524ljwfdvht.e2b.dev',
-      IBKR_ACCOUNT_ID: 'DU7428350',
+      // IBKR Trading (New Railway Server - Updated)
+      IBKR_BASE_URL: 'https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev',
+      IBKR_ACCOUNT_ID: 'DUA065113',
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
       IBKR_ORDER_DEFAULT_QTY: '1',

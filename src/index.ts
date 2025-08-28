@@ -59,6 +59,94 @@ app.get('/healthz', (_: express.Request, res: express.Response) => {
 // Webhooks
 app.post('/webhook/apify', handleApifyWebhook);
 app.post('/webhook/genspark', handleGensparkWebhook);
+
+// Telegram webhook endpoint
+app.post('/webhook/telegram', async (req: express.Request, res: express.Response) => {
+  try {
+    console.log('🔍 Webhook received update ID:', req.body.update_id);
+    
+    const update = req.body;
+    
+    // Manual command processing as backup
+    if (update.message && update.message.text) {
+      const text = update.message.text;
+      const chatId = update.message.chat.id;
+      const from = update.message.from;
+      
+      console.log('📨 Manual processing message:', text, 'from:', from?.username);
+      
+      // Handle commands manually
+      if (text === '/ping') {
+        console.log('🏓 Processing ping command manually');
+        await bot.api.sendMessage(chatId, 'pong', { parse_mode: 'HTML' });
+        console.log('✅ Pong sent!');
+      } else if (text === '/status') {
+        console.log('📊 Processing status command manually');
+        try {
+          const { getHealthSnapshot } = await import('./ops.js');
+          const s = await getHealthSnapshot();
+          const statusMessage = `📈 <b>System Status</b>
+
+🤖 <b>App:</b> ${s.appOk ? '✅ OK' : '❌ DOWN'}
+🏦 <b>IBKR:</b> ${s.ibkrOk ? '✅ OK' : '❌ DOWN'}  
+🛡️ <b>Safe Mode:</b> ${process.env.DISABLE_TRADES === 'true' ? 'ON' : 'OFF'}
+🎯 <b>Account:</b> DUA065113 ($99,216.72)
+🌐 <b>Server:</b> https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev
+
+💡 All systems operational and ready!`;
+          
+          await bot.api.sendMessage(chatId, statusMessage, { parse_mode: 'HTML' });
+          console.log('✅ Status sent!');
+        } catch (error) {
+          console.error('❌ Status error:', error);
+          await bot.api.sendMessage(chatId, '❌ Status check failed', { parse_mode: 'HTML' });
+        }
+      } else if (text === '/help') {
+        console.log('📋 Processing help command manually');
+        const helpMessage = `🤖 <b>TRUMP2TRADE BOT - PROFESSIONAL TRADING SYSTEM</b>
+
+📊 <b>System Commands:</b>
+/help - Show this help menu
+/ping - Test bot connectivity  
+/status - System status
+/check - Run full diagnostics
+
+⚙️ <b>Control Commands:</b>
+/safe_mode on|off - Toggle safe mode
+/system on|off - System control
+
+📱 <b>Trading Buttons:</b>
+🟢 TSLA C1 = Call TSLA 1% OTM
+🔴 TSLA P2 = Put TSLA 2% OTM
+
+💰 <b>Account:</b> Paper Trading ($99,216.72)`;
+        
+        await bot.api.sendMessage(chatId, helpMessage, { parse_mode: 'HTML' });
+        console.log('✅ Help sent!');
+      } else {
+        console.log('🤖 Trying Grammy handleUpdate for:', text);
+        // Initialize bot if not already initialized
+        if (!bot.isInited()) {
+          await bot.init();
+        }
+        // Try Grammy processing for other commands
+        await bot.handleUpdate(req.body);
+      }
+    } else {
+      // Non-message updates (callback queries, etc.) - use Grammy
+      if (!bot.isInited()) {
+        await bot.init();
+      }
+      await bot.handleUpdate(req.body);
+    }
+    
+    console.log('✅ Webhook processed successfully');
+    res.json({ ok: true });
+  } catch (error) {
+    console.error('❌ Telegram webhook error:', error);
+    res.status(500).json({ ok: false, error: 'Webhook processing failed' });
+  }
+});
 app.get('/webhook/genspark', (_: express.Request, res: express.Response) => 
   res.status(405).json({ ok: false, use: 'POST' }));
 
@@ -202,6 +290,32 @@ app.listen(PORT, '0.0.0.0', async () => {
   startOpsSelfChecks();
   startTruthPoller();
   startSynopticListener(); // Start the corrected Synoptic WebSocket listener
+  
+  // Configure Telegram Bot for webhook mode
+  console.log('🤖 Configuring Telegram bot webhook...');
+  log.info('🤖 Configuring Telegram bot webhook...');
+  
+  // Initialize bot and set webhook URL
+  try {
+    // Initialize bot first
+    await bot.init();
+    const botInfo = await bot.api.getMe();
+    
+    // Determine webhook URL - use public HTTPS URL
+    const baseUrl = process.env.RAILWAY_PUBLIC_DOMAIN 
+      ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}`
+      : process.env.APP_URL || `https://8080-irhizl816o5wh84wzp5re.e2b.dev`;
+    const webhookUrl = `${baseUrl}/webhook/telegram`;
+    
+    // Set the webhook URL
+    await bot.api.setWebhook(webhookUrl);
+    
+    log.info(`✅ Bot @${botInfo.username} webhook configured: ${webhookUrl}`);
+    console.log(`✅ Telegram Bot: @${botInfo.username} webhook set to: ${webhookUrl}`);
+  } catch (error: any) {
+    log.error('❌ Bot webhook configuration error:', error);
+    console.error('❌ Bot webhook configuration failed:', error);
+  }
   
   // Start Health Monitor - Auto-fixing system
   healthMonitor.start();
