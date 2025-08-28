@@ -1,6 +1,7 @@
 import axios from 'axios';
 import * as https from 'https';
 import { sendText } from './tg.js';
+import { ibkrFallback } from './ibkr-fallback-system.js';
 
 // Global system state
 let systemActive = true;
@@ -28,18 +29,16 @@ export function startOpsSelfChecks() {
 }
 
 export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolean}> {
-  // For internal health check, assume app is OK if we can execute this function
-  // This prevents circular dependency issues with external health checks
+  // Use fallback system for IBKR health check
   let appOk = true, ibkrOk = false;
+  
   try {
-    const base = process.env.IBKR_BASE_URL;
-    if (base) {
-      // Use YOUR server's /health endpoint instead of IBKR API
-      const r = await axios.get(`${base}/health`, { timeout: 5000, httpsAgent: new https.Agent({ rejectUnauthorized: false }) });
-      // Check your server's health response format
-      ibkrOk = !!(r.data?.ibkr_connected && r.data?.trading_ready && r.data?.status === 'healthy');
-    }
+    // Test IBKR connection using fallback system
+    const connectionTest = await ibkrFallback.testRealConnection();
+    ibkrOk = connectionTest.success;
+      appOk = !!r.data?.ok;
   } catch {}
+  
   return { appOk, ibkrOk };
 }
 

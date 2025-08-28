@@ -3,6 +3,7 @@ import axios from 'axios';
 import { chooseTrade, InlineTradePayload } from './ibkr.js';
 import { getHealthSnapshot, toggleSafeMode, toggleSystemActive, runFullSystemCheck } from './ops.js';
 import { getMonitor } from './monitoring.js';
+import { ibkrFallback } from './ibkr-fallback-system.js';
 
 const token = process.env.TELEGRAM_BOT_TOKEN!;
 export const bot = new Bot(token);
@@ -48,6 +49,7 @@ export async function sendText(text: string) {
   return results[0]; // Return first result for compatibility
 }
 
+<<<<<<< Updated upstream
 export async function sendTrumpAlert(args: { 
   summary: string; 
   tickers: string[]; 
@@ -273,6 +275,27 @@ bot.command('help', async (ctx) => {
 🎯 <b>Ready for real Trump → IBKR trading!</b>`;
 
   await ctx.reply(helpMessage, { parse_mode: 'HTML' });
+=======
+bot.command('help', ctx => {
+  const helpText = `🤖 <b>TRUMP2TRADE BOT - REAL IBKR TRADING</b>
+
+<b>📋 Commands:</b>
+• /help - Show commands
+• /ping - Test connection  
+• /status - System status
+• /ibkr - IBKR server status
+• /safe_mode on|off - Toggle safety
+• /system on|off - Start/stop system
+• /check - Run diagnostics
+
+<b>💡 Trading:</b>
+When Trump posts → Auto trade suggestions
+🟢 Buy Call | 🔴 Buy Put | 🧪 Preview
+
+<i>Paper account DU7428350 | Railway stable server</i>`;
+
+  ctx.reply(helpText, { parse_mode: 'HTML' });
+>>>>>>> Stashed changes
 });
 bot.command('ping', ctx => ctx.reply('pong'));
 
@@ -337,6 +360,7 @@ bot.command('check', async (ctx) => {
   await runFullSystemCheck();
 });
 
+<<<<<<< Updated upstream
 
 // Monitoring commands
 bot.command('health', async (ctx) => {
@@ -798,6 +822,60 @@ bot.command('place_real_order', async (ctx) => {
     
   } catch (error: any) {
     await ctx.reply(`❌ Order failed: ${error?.message || error}\n\n🔧 Make sure you're connected with /connect_real_ibkr`);
+=======
+bot.command('ibkr', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const { ibkrFallback } = await import('./ibkr-fallback-system.js');
+    const testResult = await ibkrFallback.testRealConnection();
+    const healthData = await ibkrFallback.getSystemHealth();
+    
+    const statusText = `🏦 <b>IBKR Server Status</b>
+
+<b>Current:</b> ${healthData.currentServer}
+<b>Status:</b> ${testResult.success ? '✅ Connected' : '❌ Failed'}
+<b>Health:</b> ${healthData.overallStatus.toUpperCase()}
+
+<b>Message:</b> ${testResult.message}
+
+<b>All Servers:</b>
+${healthData.allServers.map(s => 
+  `• ${s.active ? '🟢' : '🔴'} ${s.name} (${s.failures} failures)`
+).join('\n')}`;
+
+    await ctx.reply(statusText, { parse_mode: 'HTML' });
+  } catch (e: any) {
+    await ctx.reply(`❌ IBKR check error: ${e?.message || e}`);
+  }
+});
+
+bot.command('ibkr', async (ctx) => {
+  if (!adminOnly(ctx)) return;
+  try {
+    const health = await ibkrFallback.getSystemHealth();
+    const connection = await ibkrFallback.testRealConnection();
+    
+    let statusMsg = `🏦 <b>IBKR Server Status</b>\n\n`;
+    statusMsg += `<b>Current:</b> ${health.currentServer}\n`;
+    statusMsg += `<b>Status:</b> ${connection.success ? '✅ Connected' : '❌ Failed'}\n`;
+    statusMsg += `<b>Overall:</b> ${health.overallStatus.toUpperCase()}\n\n`;
+    
+    statusMsg += `<b>All Servers:</b>\n`;
+    health.allServers.forEach((server, i) => {
+      const icon = server.failures === 0 ? '✅' : server.failures < 3 ? '⚠️' : '❌';
+      statusMsg += `${icon} ${server.name} (${server.failures} failures)\n`;
+    });
+    
+    if (connection.data) {
+      statusMsg += `\n<b>Connection Details:</b>\n`;
+      statusMsg += `Auth: ${connection.data.authenticated ? '✅' : '❌'}\n`;
+      statusMsg += `Message: ${connection.data.message || 'N/A'}`;
+    }
+    
+    await ctx.reply(statusMsg, { parse_mode: 'HTML' });
+  } catch (e: any) {
+    await ctx.reply(`❌ IBKR status error: ${e?.message || e}`);
+>>>>>>> Stashed changes
   }
 });
 
