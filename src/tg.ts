@@ -238,7 +238,7 @@ bot.command('help', async (ctx) => {
 
 📊 <b>System Commands:</b>
 /help - Show this help menu
-/ping - Test bot connectivity  
+/ping - Test bot connectivity
 /status - System status
 /health - Health diagnostics
 /monitor - System monitoring
@@ -251,26 +251,12 @@ bot.command('help', async (ctx) => {
 /check - Full diagnostics
 
 🔥 <b>REAL IBKR CONNECTION:</b>
-/connect_real_ibkr - Connect to YOUR real IBKR account
-/real_balance - YOUR real account balance  
-/real_positions - YOUR real portfolio positions
-/ibkr_balance - Same as /real_balance (shortcut)
-/ibkr_positions - Same as /real_positions (shortcut)
-/place_real_order - Execute REAL orders
-
-📈 <b>Order Format:</b>
-<code>/place_real_order TSLA BUY 10</code> (Market order)
-<code>/place_real_order AAPL SELL 5 450.00</code> (Limit order)
-
-⚠️ <b>IMPORTANT:</b>
-- Real orders execute on your actual IBKR account
-- Make sure TWS/Gateway is running on your computer
-- Test connection first with /connect_real_ibkr
-
-🛡️ <b>Safety:</b> Set DISABLE_TRADES=true to prevent accidental orders
-
-━━━━━━━━━━━━━━━━━━━━━
-🎯 <b>Ready for real Trump → IBKR trading!</b>`;
+/connect_real_ibkr - Connect to real IBKR account
+/real_balance - Real account balance
+/real_positions - Portfolio positions
+/ibkr_balance - Balance shortcut
+/ibkr_positions - Positions shortcut
+/place_real_order - Execute real orders`;
 
   await ctx.reply(helpMessage, { parse_mode: 'HTML' });
 });
