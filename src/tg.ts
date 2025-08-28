@@ -1,6 +1,6 @@
 import { Bot, InlineKeyboard } from 'grammy';
 import axios from 'axios';
-import { chooseTrade, InlineTradePayload } from './ibkr.js';
+import { chooseTrade, InlineTradePayload } from './ibkr-simple.js';
 import { getHealthSnapshot, toggleSafeMode, toggleSystemActive, runFullSystemCheck } from './ops.js';
 import { getMonitor } from './monitoring.js';
 
@@ -66,6 +66,15 @@ export async function sendText(text: string) {
       });
       console.log(`✅ Telegram message sent successfully to ${targetChatId}: ${result.data.result.message_id}`);
       results.push(result);
+      
+      // Update advanced monitoring - successful message sent
+      try {
+        const { advancedMonitor } = await import('./advanced-monitoring.js');
+        advancedMonitor.updateMessageSuccess();
+      } catch (monitorError) {
+        // Don't let monitoring errors break message sending
+        console.log('⚠️ Monitor update failed (non-critical):', monitorError);
+      }
     } catch (error: any) {
       console.error(`❌ Failed to send Telegram message to ${targetChatId}:`, error?.response?.data || error?.message || error);
     }
@@ -267,6 +276,15 @@ export async function sendTrumpAlert(args: {
       
       console.log(`✅ Telegram message sent successfully to ${targetChatId}: ${result.message_id}`);
       results.push(result);
+      
+      // Update advanced monitoring - Trump post successfully processed
+      try {
+        const { advancedMonitor } = await import('./advanced-monitoring.js');
+        advancedMonitor.updateTrumpPostProcessed(args.url);
+      } catch (monitorError) {
+        // Don't let monitoring errors break Trump alert sending
+        console.log('⚠️ Monitor update failed (non-critical):', monitorError);
+      }
     } catch (error: any) {
       console.error(`❌ Failed to send Trump alert to ${targetChatId}:`, error?.response?.data || error?.message || error);
     }
@@ -284,7 +302,7 @@ bot.on('message', (ctx) => {
 bot.command('help', async (ctx) => {
   console.log('✅ HELP command received from:', ctx.from?.username);
   console.log('🔧 Processing help command...');
-  const helpMessage = `🤖 <b>TRUMP2TRADE BOT - PROFESSIONAL TRADING SYSTEM</b>
+  const helpMessage = `<b>Help</b>
 
 📊 <b>System Commands:</b>
 /help - Show this help menu
@@ -296,11 +314,21 @@ bot.command('help', async (ctx) => {
 /safe_mode on|off - Toggle safe mode
 /system on|off - System control
 
-📱 <b>Trading Buttons:</b>
-🟢 TSLA C1 = Call TSLA 1% OTM
-🔴 TSLA P2 = Put TSLA 2% OTM
+🏦 <b>IBKR Trading:</b>
+/connect_real_ibkr - Test IBKR connection
+/ibkr_balance - View account balance
+/ibkr_positions - View current positions
+/place_real_order - Place manual order
 
-💰 <b>Account:</b> Paper Trading ($99,216.72)`;
+📊 <b>Monitoring & Health:</b>
+/health - System health report
+/monitor - Recent errors check
+
+💹 <b>Analytics & Reports:</b>
+/daily - Generate daily trading report
+/analytics [YYYY-MM-DD] - View analytics
+
+🎯 <b>Usage:</b> Bot responds to Trump posts with trading buttons`;
 
   try {
     console.log('📤 Sending help message...');

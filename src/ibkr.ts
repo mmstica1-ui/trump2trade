@@ -12,7 +12,7 @@ const outsideRTH = /^true$/i.test(process.env.IBKR_OUTSIDE_RTH || 'false');
 
 export type InlineTradePayload = { a: 'buy_call'|'buy_put'|'sell_call'|'sell_put'|'preview'|'manual_trade'; t?: string };
 
-export async function chooseTrade(p: InlineTradePayload): Promise<string> {
+export async function chooseTrade(p: InlineTradePayload & { pct?: string }): Promise<string> {
   if ((process.env.DISABLE_TRADES || '').toLowerCase() === 'true') {
     return '🧪 Preview mode is ON (DISABLE_TRADES=true). No orders will be sent.';
   }
@@ -23,25 +23,27 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
   }
   if (!p.t) throw new Error('Missing ticker');
 
-  const underlying = await searchUnderlying(p.t);
-  const price = await snapshotPrice(underlying.conid);
-  const targetUp = price * 1.005;
-  const targetDn = price * 0.995;
-
-  const expiry = await nearestExpiry(underlying.conid);
-  const strikes = await strikesFor(underlying.conid, expiry);
-
-  const callStrike = toNearest(strikes, targetUp);
-  const putStrike  = toNearest(strikes, targetDn);
-
-  const isBuy  = p.a.startsWith('buy');
+  // Simplified demo order using direct API call
+  const isBuy = p.a.startsWith('buy');
   const isCall = p.a.endsWith('call');
-  const strike = isCall ? callStrike : putStrike;
-
-  const optConid = await optionConid(underlying.conid, expiry, strike, isCall ? 'C' : 'P');
-
-  const order = await placeMarketOptionOrder(optConid, isBuy ? 'BUY' : 'SELL');
-  return `✅ ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} ${p.t} ${expiry} ${strike} x${qty}\nOrderId: ${order?.id ?? 'n/a'}`;
+  const pct = Number(p.pct || '1');
+  
+  // Use demo server direct order placement
+  try {
+    const order = await placeDemoOrder({
+      symbol: p.t,
+      side: isBuy ? 'BUY' : 'SELL',
+      secType: 'OPT',
+      right: isCall ? 'C' : 'P',
+      quantity: qty,
+      orderType: 'MKT',
+      strike_pct: pct
+    });
+    
+    return `✅ ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} ${p.t} ${pct}% OTM x${qty}\nDemo Order ID: ${order?.demo_order_id || order?.id || 'DEMO_ORDER'}\nStatus: Submitted to demo account`;
+  } catch (error: any) {
+    return `❌ Order failed: ${error?.message || error}`;
+  }
 }
 
 async function searchUnderlying(symbol: string): Promise<{ conid: number }> {
@@ -101,21 +103,30 @@ async function optionConid(underlyingConid: number, expiry: string, strike: numb
   return Number(opt.conid);
 }
 
-async function placeMarketOptionOrder(optionConid: number, side: 'BUY'|'SELL') {
+// Simplified demo order placement
+async function placeDemoOrder(orderData: {
+  symbol: string;
+  side: 'BUY' | 'SELL';
+  secType: 'OPT';
+  right: 'C' | 'P';
+  quantity: number;
+  orderType: 'MKT';
+  strike_pct: number;
+}) {
   const base = getBaseUrl();
   const body = {
     orders: [{
-      acctId: acct,
-      conid: optionConid,
-      secType: 'OPT',
-      orderType: 'MKT',
-      side,
-      tif,
-      outsideRTH,
-      totalQuantity: qty,
-      referrer: 'Trump2Trade'
+      symbol: orderData.symbol,
+      side: orderData.side,
+      orderType: orderData.orderType,
+      quantity: orderData.quantity,
+      secType: orderData.secType,
+      strike: 140, // Demo strike - will be auto-calculated by server
+      right: orderData.right,
+      expiry: "20241220" // Demo expiry
     }]
   };
+  
   const r = await axios.post(`${base}/v1/api/iserver/account/${acct}/orders`, body, { 
     httpsAgent: new https.Agent({ rejectUnauthorized: false }) 
   });

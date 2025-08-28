@@ -27,6 +27,7 @@ import { handleApifyWebhook } from './apify.js';
 import { handleGensparkWebhook } from './genspark.js';
 import { startSynopticListener } from './synoptic.js';
 import { healthMonitor } from './health-monitor.js';
+import { advancedMonitor } from './advanced-monitoring.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -65,6 +66,10 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
   try {
     console.log('🔍 Webhook received update ID:', req.body.update_id);
     
+    // Update advanced monitoring - webhook activity detected
+    const { advancedMonitor } = await import('./advanced-monitoring.js');
+    advancedMonitor.updateWebhookSuccess();
+    
     const update = req.body;
     
     // Manual command processing as backup
@@ -80,6 +85,8 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
         console.log('🏓 Processing ping command manually');
         await bot.api.sendMessage(chatId, 'pong', { parse_mode: 'HTML' });
         console.log('✅ Pong sent!');
+        advancedMonitor.updateCommandSuccess();
+        advancedMonitor.updateMessageSuccess();
       } else if (text === '/status') {
         console.log('📊 Processing status command manually');
         try {
@@ -97,13 +104,41 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
           
           await bot.api.sendMessage(chatId, statusMessage, { parse_mode: 'HTML' });
           console.log('✅ Status sent!');
+          advancedMonitor.updateCommandSuccess();
+          advancedMonitor.updateMessageSuccess();
         } catch (error) {
           console.error('❌ Status error:', error);
           await bot.api.sendMessage(chatId, '❌ Status check failed', { parse_mode: 'HTML' });
         }
+      } else if (text === '/monitoring' || text === '/monitor_status') {
+        console.log('📊 Processing monitoring status command manually');
+        try {
+          const { advancedMonitor } = await import('./advanced-monitoring.js');
+          const status = advancedMonitor.getMonitoringStatus();
+          
+          const statusMessage = `🔍 <b>Advanced Monitoring Status</b>\n\n` +
+            `🟢 <b>System Running:</b> ${status.isRunning ? 'YES' : 'NO'}\n` +
+            `⏰ <b>Last Command Response:</b> ${Math.round(status.timeSinceLastCommand/1000)}s ago\n` +
+            `📡 <b>Last Webhook Activity:</b> ${Math.round(status.timeSinceLastWebhook/1000)}s ago\n` +
+            `💬 <b>Last Message Sent:</b> ${Math.round(status.timeSinceLastMessage/1000)}s ago\n` +
+            `🦅 <b>Last Trump Post:</b> ${Math.round(status.timeSinceLastTrumpPost/1000)}s ago\n` +
+            `📊 <b>Consecutive Failures:</b> ${status.consecutiveFailures}\n\n` +
+            `🚨 <b>Critical Issues:</b> ${status.criticalIssues.length > 0 ? status.criticalIssues.join(', ') : 'None'}\n` +
+            `⚠️ <b>Missed Posts:</b> ${status.missedPosts.length}\n\n` +
+            `✅ <b>Zero-tolerance monitoring active</b>\n` +
+            `Health checks every 30 seconds`;
+          
+          await bot.api.sendMessage(chatId, statusMessage, { parse_mode: 'HTML' });
+          console.log('✅ Monitoring status sent!');
+          advancedMonitor.updateCommandSuccess();
+          advancedMonitor.updateMessageSuccess();
+        } catch (error) {
+          console.error('❌ Monitoring status error:', error);
+          await bot.api.sendMessage(chatId, '❌ Monitoring status check failed', { parse_mode: 'HTML' });
+        }
       } else if (text === '/help') {
         console.log('📋 Processing help command manually');
-        const helpMessage = `🤖 <b>TRUMP2TRADE BOT - PROFESSIONAL TRADING SYSTEM</b>
+        const helpMessage = `<b>Help</b>
 
 📊 <b>System Commands:</b>
 /help - Show this help menu
@@ -115,14 +150,27 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
 /safe_mode on|off - Toggle safe mode
 /system on|off - System control
 
-📱 <b>Trading Buttons:</b>
-🟢 TSLA C1 = Call TSLA 1% OTM
-🔴 TSLA P2 = Put TSLA 2% OTM
+🏦 <b>IBKR Trading:</b>
+/connect_real_ibkr - Test IBKR connection
+/ibkr_balance - View account balance
+/ibkr_positions - View current positions
+/place_real_order - Place manual order
 
-💰 <b>Account:</b> Paper Trading ($99,216.72)`;
+📊 <b>Monitoring & Health:</b>
+/health - System health report
+/monitor - Recent errors check
+/monitoring - Advanced monitoring status
+
+💹 <b>Analytics & Reports:</b>
+/daily - Generate daily trading report
+/analytics [YYYY-MM-DD] - View analytics
+
+🎯 <b>Usage:</b> Bot responds to Trump posts with trading buttons`;
         
         await bot.api.sendMessage(chatId, helpMessage, { parse_mode: 'HTML' });
         console.log('✅ Help sent!');
+        advancedMonitor.updateCommandSuccess();
+        advancedMonitor.updateMessageSuccess();
       } else {
         console.log('🤖 Trying Grammy handleUpdate for:', text);
         // Initialize bot if not already initialized
@@ -317,9 +365,13 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error('❌ Bot webhook configuration failed:', error);
   }
   
-  // Start Health Monitor - Auto-fixing system
+  // Start Advanced Monitoring System - Zero-tolerance monitoring
+  advancedMonitor.start();
+  log.info('🔍 Advanced Monitoring System started - Zero-tolerance for downtime');
+  
+  // Keep basic health monitor as backup
   healthMonitor.start();
-  log.info('🔧 Health Monitor started - Auto-healing system active');
+  log.info('🔧 Basic Health Monitor started - Auto-healing system active');
   
   // Send startup message only if enough time has passed (prevents Railway redeploy spam)
   const now = Date.now();
