@@ -295,7 +295,7 @@ When Trump posts → Auto trade suggestions
 <i>Paper account DU7428350 | Railway stable server</i>`;
 
   ctx.reply(helpText, { parse_mode: 'HTML' });
->>>>>>> Stashed changes
+
 });
 bot.command('ping', ctx => ctx.reply('pong'));
 
@@ -822,30 +822,6 @@ bot.command('place_real_order', async (ctx) => {
     
   } catch (error: any) {
     await ctx.reply(`❌ Order failed: ${error?.message || error}\n\n🔧 Make sure you're connected with /connect_real_ibkr`);
-=======
-bot.command('ibkr', async (ctx) => {
-  if (!adminOnly(ctx)) return;
-  try {
-    const { ibkrFallback } = await import('./ibkr-fallback-system.js');
-    const testResult = await ibkrFallback.testRealConnection();
-    const healthData = await ibkrFallback.getSystemHealth();
-    
-    const statusText = `🏦 <b>IBKR Server Status</b>
-
-<b>Current:</b> ${healthData.currentServer}
-<b>Status:</b> ${testResult.success ? '✅ Connected' : '❌ Failed'}
-<b>Health:</b> ${healthData.overallStatus.toUpperCase()}
-
-<b>Message:</b> ${testResult.message}
-
-<b>All Servers:</b>
-${healthData.allServers.map(s => 
-  `• ${s.active ? '🟢' : '🔴'} ${s.name} (${s.failures} failures)`
-).join('\n')}`;
-
-    await ctx.reply(statusText, { parse_mode: 'HTML' });
-  } catch (e: any) {
-    await ctx.reply(`❌ IBKR check error: ${e?.message || e}`);
   }
 });
 
@@ -875,7 +851,7 @@ bot.command('ibkr', async (ctx) => {
     await ctx.reply(statusMsg, { parse_mode: 'HTML' });
   } catch (e: any) {
     await ctx.reply(`❌ IBKR status error: ${e?.message || e}`);
->>>>>>> Stashed changes
+
   }
 });
 
