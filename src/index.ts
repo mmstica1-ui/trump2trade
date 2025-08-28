@@ -155,6 +155,7 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
 /ibkr_balance - View account balance
 /ibkr_positions - View current positions
 /place_real_order - Place manual order
+/account - View account info (Demo/Real)
 
 📊 <b>Monitoring & Health:</b>
 /health - System health report
@@ -171,6 +172,100 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
         console.log('✅ Help sent!');
         advancedMonitor.updateCommandSuccess();
         advancedMonitor.updateMessageSuccess();
+      } else if (text === '/check') {
+        console.log('🔍 Processing check command manually');
+        try {
+          await bot.api.sendMessage(chatId, '🔍 Running full system diagnostics...', { parse_mode: 'HTML' });
+          const { runFullSystemCheck } = await import('./ops.js');
+          await runFullSystemCheck();
+          console.log('✅ Full system check completed!');
+          advancedMonitor.updateCommandSuccess();
+          advancedMonitor.updateMessageSuccess();
+        } catch (error) {
+          console.error('❌ Check command error:', error);
+          await bot.api.sendMessage(chatId, '❌ System check failed', { parse_mode: 'HTML' });
+        }
+      } else if (text === '/monitor') {
+        console.log('📊 Processing monitor command manually');
+        try {
+          const { getMonitor } = await import('./monitoring.js');
+          const monitor = getMonitor();
+          const health = monitor.getSystemHealth();
+          
+          if (health.errors.length === 0) {
+            await bot.api.sendMessage(chatId, '✅ No recent errors found', { parse_mode: 'HTML' });
+          } else {
+            const recentErrors = health.errors.slice(-5).map((error, index) => 
+              `${index + 1}. [${new Date(error.timestamp).toLocaleTimeString('he-IL')}] ${error.error}`
+            ).join('\n');
+            
+            const message = `🐛 <b>Recent System Errors (${health.errors.length} total)</b>\n\n${recentErrors}`;
+            await bot.api.sendMessage(chatId, message, { parse_mode: 'HTML' });
+          }
+          console.log('✅ Monitor report sent!');
+          advancedMonitor.updateCommandSuccess();
+          advancedMonitor.updateMessageSuccess();
+        } catch (error) {
+          console.error('❌ Monitor command error:', error);
+          await bot.api.sendMessage(chatId, '❌ Monitor check failed', { parse_mode: 'HTML' });
+        }
+      } else if (text.startsWith('/analytics')) {
+        console.log('📊 Processing analytics command manually');
+        try {
+          const args = text.split(' ');
+          const dateArg = args[1]; // Optional date in YYYY-MM-DD format
+          
+          const { getDailyAnalytics } = await import('./daily-analytics.js');
+          const analytics = getDailyAnalytics();
+          
+          if (dateArg && dateArg.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            await analytics.triggerDailyReport(dateArg);
+            await bot.api.sendMessage(chatId, `📊 Analytics report generated for ${dateArg}`, { parse_mode: 'HTML' });
+          } else {
+            const today = new Date().toISOString().split('T')[0];
+            const todayData = analytics.getAnalytics(today);
+            
+            if (!todayData || todayData.totalPosts === 0) {
+              await bot.api.sendMessage(chatId, '📊 No posts today yet. System is monitoring for Trump posts...\n\nUse /analytics YYYY-MM-DD for specific date', { parse_mode: 'HTML' });
+            } else {
+              await analytics.triggerDailyReport();
+              await bot.api.sendMessage(chatId, "📊 Today's analytics report generated", { parse_mode: 'HTML' });
+            }
+          }
+          console.log('✅ Analytics report sent!');
+          advancedMonitor.updateCommandSuccess();
+          advancedMonitor.updateMessageSuccess();
+        } catch (error) {
+          console.error('❌ Analytics command error:', error);
+          await bot.api.sendMessage(chatId, `❌ Analytics failed: ${(error as Error).message}`, { parse_mode: 'HTML' });
+        }
+      } else if (text === '/account_info' || text === '/account') {
+        console.log('🏦 Processing account info command manually');
+        try {
+          const accountResponse = await fetch(`${process.env.IBKR_BASE_URL}/health`);
+          const accountData = await accountResponse.json();
+          
+          const demoMessage = '• זהו חשבון DEMO בלבד\n• לא נקנות מניות אמיתיות\n• כל העסקאות הן סימולציה\n• הכסף אינו אמיתי ($99,216.72 DEMO)';
+          const realMessage = '• זהו חשבון אמיתי\n• העסקאות יבוצעו עם כסף אמיתי\n• יש להיזהר עם כל עסקה';
+          
+          const message = `🏦 <b>מידע על חשבון IBKR</b>\n\n` +
+            `📊 <b>סטטוס:</b> ${accountData.status || 'Unknown'}\n` +
+            `🎯 <b>חשבון:</b> ${accountData.target_account || 'Unknown'}\n` +
+            `🔗 <b>מצב:</b> ${accountData.demo_mode ? '🧪 DEMO' : '💰 אמיתי'}\n` +
+            `📡 <b>שרת:</b> ${accountData.service || 'Unknown'}\n` +
+            `🕒 <b>זמן:</b> ${new Date().toLocaleString('he-IL')}\n\n` +
+            `⚠️ <b>חשוב לדעת:</b>\n` +
+            (accountData.demo_mode ? demoMessage : realMessage) + '\n\n' +
+            `📞 <b>לשינוי לחשבון אמיתי:</b> צור קשר עם מפתח הבוט`;
+          
+          await bot.api.sendMessage(chatId, message, { parse_mode: 'HTML' });
+          console.log('✅ Account info sent!');
+          advancedMonitor.updateCommandSuccess();
+          advancedMonitor.updateMessageSuccess();
+        } catch (error) {
+          console.error('❌ Account info error:', error);
+          await bot.api.sendMessage(chatId, '❌ שגיאה בבדיקת מידע החשבון', { parse_mode: 'HTML' });
+        }
       } else {
         console.log('🤖 Trying Grammy handleUpdate for:', text);
         // Initialize bot if not already initialized

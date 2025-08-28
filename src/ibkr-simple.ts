@@ -68,8 +68,9 @@ export async function chooseTrade(p: InlineTradePayload): Promise<string> {
     
     return `✅ ${isBuy ? 'BUY' : 'SELL'} ${isCall ? 'CALL' : 'PUT'} ${p.t} ${pct}% OTM x${qty}\n` +
            `📋 Order ID: ${orderId}\n` +
-           `📊 Status: ${status}\n` +
-           `🏦 Account: ${acct} (Demo Mode)`;
+           `📊 Status: Demo order submitted: ${status}\n` +
+           `🏦 Account: ${acct} (Demo Mode)\n` +
+           `⚠️ <b>זהו חשבון DEMO - לא נקנות מניות אמיתיות!</b>`;
            
   } catch (error: any) {
     console.error('❌ Order placement error:', error);
