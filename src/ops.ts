@@ -36,7 +36,6 @@ export async function getHealthSnapshot(): Promise<{appOk:boolean; ibkrOk:boolea
     // Test IBKR connection using fallback system
     const connectionTest = await ibkrFallback.testRealConnection();
     ibkrOk = connectionTest.success;
-      appOk = !!r.data?.ok;
   } catch {}
   
   return { appOk, ibkrOk };
