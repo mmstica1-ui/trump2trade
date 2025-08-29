@@ -293,7 +293,10 @@ export async function sendTrumpAlert(args: {
   return results[0]; // Return first result for compatibility
 }
 
-// Add debugging for all messages
+// All commands handled by manual webhook handler in index.ts
+// Grammy handlers disabled to prevent conflicts
+
+/* DISABLED Grammy handlers - now handled by webhook
 bot.on('message', (ctx) => {
   console.log('📨 Bot received message:', ctx.message.text, 'from:', ctx.from?.username);
   console.log('📨 Full message object:', JSON.stringify(ctx.message, null, 2));
@@ -338,8 +341,9 @@ bot.command('help', async (ctx) => {
     console.error('❌ Error sending help message:', error);
   }
 });
-// ping command handled by manual webhook handler in index.ts
+*/
 
+// Only callback_query handler remains active for trading buttons
 bot.on('callback_query:data', async ctx => {
   try {
     const payload = JSON.parse(ctx.callbackQuery.data!) as InlineTradePayload;
