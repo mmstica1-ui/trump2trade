@@ -98,7 +98,7 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
 🏦 <b>IBKR:</b> ${s.ibkrOk ? '✅ OK' : '❌ DOWN'}  
 🛡️ <b>Safe Mode:</b> ${process.env.DISABLE_TRADES === 'true' ? 'ON' : 'OFF'}
 🎯 <b>Account:</b> DUA065113 ($99,216.72)
-🌐 <b>Server:</b> https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev
+🌐 <b>Server:</b> https://web-production-a020.up.railway.app
 
 💡 All systems operational and ready!`;
           

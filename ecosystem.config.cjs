@@ -21,7 +21,7 @@ module.exports = {
       GEMINI_MODEL: 'gemini-1.5-flash',
       // IBKR Trading (Railway Server - Working)
       IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
-      IBKR_ACCOUNT_ID: 'DUA065113',
+      IBKR_ACCOUNT_ID: 'DU7428350',
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
       IBKR_ORDER_DEFAULT_QTY: '1',
@@ -55,7 +55,7 @@ module.exports = {
       GEMINI_MODEL: 'gemini-1.5-flash',
       // IBKR Trading (Railway Server - Working)
       IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
-      IBKR_ACCOUNT_ID: 'DUA065113',
+      IBKR_ACCOUNT_ID: 'DU7428350',
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
       IBKR_ORDER_DEFAULT_QTY: '1',

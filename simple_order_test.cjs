@@ -4,7 +4,7 @@ const axios = require('axios');
 async function testDirectOrder() {
   console.log('🧪 Testing direct NVDA order placement...');
   
-  const baseUrl = 'https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev';
+  const baseUrl = 'https://web-production-a020.up.railway.app';
   const accountId = 'DUA065113';
   
   const orderData = {
