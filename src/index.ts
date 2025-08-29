@@ -26,8 +26,9 @@ import { startTruthPoller } from './poller.js';
 import { handleApifyWebhook } from './apify.js';
 import { handleGensparkWebhook } from './genspark.js';
 import { startSynopticListener } from './synoptic.js';
-import { healthMonitor } from './health-monitor.js';
-import { advancedMonitor } from './advanced-monitoring.js';
+// Temporarily disabled monitoring to debug pong spam
+// import { healthMonitor } from './health-monitor.js';
+// import { advancedMonitor } from './advanced-monitoring.js';
 
 const log = pino({ level: process.env.NODE_ENV === 'production' ? 'info' : 'debug' });
 
@@ -465,13 +466,11 @@ app.listen(PORT, '0.0.0.0', async () => {
     console.error('❌ Bot webhook configuration failed:', error);
   }
   
-  // Start Advanced Monitoring System - Zero-tolerance monitoring
-  advancedMonitor.start();
-  log.info('🔍 Advanced Monitoring System started - Zero-tolerance for downtime');
-  
-  // Keep basic health monitor as backup
-  healthMonitor.start();
-  log.info('🔧 Basic Health Monitor started - Auto-healing system active');
+  // MONITORING TEMPORARILY DISABLED TO DEBUG PONG SPAM
+  console.log('⚠️  Advanced monitoring disabled for debugging');
+  console.log('⚠️  Health monitor disabled for debugging');
+  // advancedMonitor.start();
+  // healthMonitor.start();
   
   // Send startup message only if enough time has passed (prevents Railway redeploy spam)
   const now = Date.now();
