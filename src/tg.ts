@@ -355,6 +355,7 @@ bot.on('callback_query:data', async ctx => {
   }
 });
 
+/* DISABLED - ALL Grammy handlers moved to webhook
 bot.command('status', async (ctx) => {
   if (!adminOnly(ctx)) return;
   try {
@@ -868,5 +869,7 @@ bot.command('place_real_order', async (ctx) => {
     await ctx.reply(`❌ Order failed: ${error?.message || error}\n\n🔧 Make sure you're connected with /connect_real_ibkr`);
   }
 });
+
+*/
 
 export default bot;
