@@ -338,7 +338,7 @@ bot.command('help', async (ctx) => {
     console.error('❌ Error sending help message:', error);
   }
 });
-bot.command('ping', ctx => ctx.reply('pong'));
+// ping command handled by manual webhook handler in index.ts
 
 bot.on('callback_query:data', async ctx => {
   try {

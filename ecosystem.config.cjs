@@ -19,8 +19,8 @@ module.exports = {
       // Gemini (Google)
       GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
       GEMINI_MODEL: 'gemini-1.5-flash',
-      // IBKR Trading (New Railway Server - Updated)
-      IBKR_BASE_URL: 'https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev',
+      // IBKR Trading (Railway Server - Working)
+      IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
       IBKR_ACCOUNT_ID: 'DUA065113',
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',
@@ -53,8 +53,8 @@ module.exports = {
       // Gemini (Google)
       GOOGLE_API_KEY: 'AIzaSyA0oLF9UXHpRBPF4j3dR1ePd_NI55NWMmk',
       GEMINI_MODEL: 'gemini-1.5-flash',
-      // IBKR Trading (New Railway Server - Updated)
-      IBKR_BASE_URL: 'https://8000-igsze8jx1po9nx2jjg1ut.e2b.dev',
+      // IBKR Trading (Railway Server - Working)
+      IBKR_BASE_URL: 'https://web-production-a020.up.railway.app',
       IBKR_ACCOUNT_ID: 'DUA065113',
       TWS_USERNAME: 'ilyuwc476',
       TWS_PASSWORD: 'trump123!',

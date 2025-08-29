@@ -245,17 +245,22 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
           const accountResponse = await fetch(`${process.env.IBKR_BASE_URL}/health`);
           const accountData = await accountResponse.json();
           
-          const demoMessage = '• זהו חשבון DEMO בלבד\n• לא נקנות מניות אמיתיות\n• כל העסקאות הן סימולציה\n• הכסף אינו אמיתי ($99,216.72 DEMO)';
+          // Always treat as DEMO since we're using demo accounts
+          const isDemoMode = true; // Force DEMO mode since we don't have real accounts
+          
+          const demoMessage = '• זהו חשבון DEMO בלבד\n• לא נקנות מניות אמיתיות\n• כל העסקאות הן סימולציה\n• הכסף אינו אמיתי';
           const realMessage = '• זהו חשבון אמיתי\n• העסקאות יבוצעו עם כסף אמיתי\n• יש להיזהר עם כל עסקה';
           
           const message = `🏦 <b>מידע על חשבון IBKR</b>\n\n` +
-            `📊 <b>סטטוס:</b> ${accountData.status || 'Unknown'}\n` +
-            `🎯 <b>חשבון:</b> ${accountData.target_account || 'Unknown'}\n` +
-            `🔗 <b>מצב:</b> ${accountData.demo_mode ? '🧪 DEMO' : '💰 אמיתי'}\n` +
-            `📡 <b>שרת:</b> ${accountData.service || 'Unknown'}\n` +
-            `🕒 <b>זמן:</b> ${new Date().toLocaleString('he-IL')}\n\n` +
+            `📊 <b>סטטוס שרת:</b> ${accountData.status || 'Unknown'}\n` +
+            `🎯 <b>חשבון:</b> ${process.env.IBKR_ACCOUNT_ID || 'Unknown'}\n` +
+            `🔗 <b>מצב:</b> ${isDemoMode ? '🧪 DEMO' : '💰 אמיתי'}\n` +
+            `📡 <b>שרת:</b> ${accountData.service || 'IBKR Gateway'}\n` +
+            `🕒 <b>זמן:</b> ${new Date().toLocaleString('he-IL')}\n` +
+            `⚡ <b>מחובר לIBKR:</b> ${accountData.ibkr_connected ? 'כן' : 'לא'}\n` +
+            `🔄 <b>מוכן למסחר:</b> ${accountData.trading_ready ? 'כן' : 'לא'}\n\n` +
             `⚠️ <b>חשוב לדעת:</b>\n` +
-            (accountData.demo_mode ? demoMessage : realMessage) + '\n\n' +
+            (isDemoMode ? demoMessage : realMessage) + '\n\n' +
             `📞 <b>לשינוי לחשבון אמיתי:</b> צור קשר עם מפתח הבוט`;
           
           await bot.api.sendMessage(chatId, message, { parse_mode: 'HTML' });
@@ -264,7 +269,7 @@ app.post('/webhook/telegram', async (req: express.Request, res: express.Response
           advancedMonitor.updateMessageSuccess();
         } catch (error) {
           console.error('❌ Account info error:', error);
-          await bot.api.sendMessage(chatId, '❌ שגיאה בבדיקת מידע החשבון', { parse_mode: 'HTML' });
+          await bot.api.sendMessage(chatId, '❌ שגיאה בבדיקת מידע החשבון - שרת IBKR לא זמין', { parse_mode: 'HTML' });
         }
       } else {
         console.log('🤖 Trying Grammy handleUpdate for:', text);
